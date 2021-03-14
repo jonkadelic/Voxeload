@@ -36,7 +36,7 @@ namespace Voxeload
         public Voxeload(GameWindowSettings gws, NativeWindowSettings nws) : base(gws, nws)
         {
             ClientRectangle = new(256, 256, 640 + 256, 480 + 256);
-            level = new(new FlatChunkGenerator());
+            level = new(new FlatLevelGenerator());
             levelRenderer = new(this, level);
             player = new(this, level);
         }
@@ -65,6 +65,8 @@ namespace Voxeload
             }
             selectionModel = new(vertices, model.Indices);
             selectionModel.SetColours(new uint[] { 0x7FFFFFFF, 0x7FFFFFFF, 0x7FFFFFFF, 0x7FFFFFFF, 0x7FFFFFFF, 0x7FFFFFFF, 0x7FFFFFFF, 0x7FFFFFFF });
+
+            updateCounter = RenderFrequency;
 
             base.OnLoad();
         }
@@ -176,6 +178,7 @@ namespace Voxeload
             base.OnUpdateFrame(args);
         }
 
+        double updateCounter;
         protected override void OnRenderFrame(FrameEventArgs args)
         {
             ErrorCode err = GL.GetError();
@@ -193,7 +196,7 @@ namespace Voxeload
 
             model = Matrix4.Identity;
             view = Matrix4.CreateTranslation(-player.Pos) * Matrix4.CreateRotationY(MathHelper.DegreesToRadians(player.YRotation)) * Matrix4.CreateRotationX(MathHelper.DegreesToRadians(player.XRotation));
-            projection = Matrix4.CreatePerspectiveFieldOfView(MathHelper.DegreesToRadians(45), (float)ClientSize.X / ClientSize.Y, 0.1f, 200.0f);
+            projection = Matrix4.CreatePerspectiveFieldOfView(MathHelper.DegreesToRadians(90), (float)ClientSize.X / ClientSize.Y, 0.1f, 200.0f);
 
             GL.UniformMatrix4(GL.GetUniformLocation(ActiveShader.Handle, "model"), false, ref model);
             GL.UniformMatrix4(GL.GetUniformLocation(ActiveShader.Handle, "view"), false, ref view);
@@ -220,6 +223,14 @@ namespace Voxeload
             GL.Disable(EnableCap.CullFace);
 
             Context.SwapBuffers();
+
+            if (updateCounter < 0)
+            {
+                updateCounter = RenderFrequency;
+                Console.WriteLine($"{1 / args.Time:F4} FPS");
+            }
+            updateCounter--;
+
             base.OnRenderFrame(args);
         }
     }

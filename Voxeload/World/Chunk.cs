@@ -9,9 +9,9 @@ namespace Voxeload.World
 {
     public class Chunk : ITileAccess
     {
-        public const int X_LENGTH = 16;
-        public const int Y_LENGTH = 128;
-        public const int Z_LENGTH = 16;
+        public const int X_LENGTH = 32;
+        public const int Y_LENGTH = 32;
+        public const int Z_LENGTH = 32;
 
         private readonly byte[,,] tiles;
 
@@ -19,10 +19,19 @@ namespace Voxeload.World
 
         public bool IsDirty { get; set; }
 
-        public Chunk(Level level, IChunkGenerator generator, int x, int z)
+        public int X { get; }
+        public int Y { get; }
+        public int Z { get; }
+
+        public object chunkDataLock = new();
+
+        public Chunk(Level level, byte[,,] tiles, int x, int y, int z)
         {
-            tiles = generator.GenerateChunk(x, z);
+            this.tiles = tiles;
             this.level = level;
+            X = x;
+            Y = y;
+            Z = z;
         }
 
         public byte GetTileID(int x, int y, int z)
@@ -31,7 +40,10 @@ namespace Voxeload.World
             if (y < 0 || y >= Y_LENGTH) return 0;
             if (z < 0 || z >= Z_LENGTH) return 0;
 
-            return tiles[z, y, x];
+            lock (chunkDataLock)
+            {
+                return tiles[z, y, x];
+            }
         }
 
         public void SetTileID(int x, int y, int z, byte id)
@@ -40,7 +52,10 @@ namespace Voxeload.World
             if (y < 0 || y >= Y_LENGTH) return;
             if (z < 0 || z >= Z_LENGTH) return;
 
-            tiles[z, y, x] = id;
+            lock (chunkDataLock)
+            {
+                tiles[z, y, x] = id;
+            }
 
             IsDirty = true;
         }
@@ -64,6 +79,21 @@ namespace Voxeload.World
             if (plusX == 0) sides |= 1 << 5;
 
             return sides;
+        }
+
+        public override bool Equals(object obj)
+        {
+            if (obj is Chunk other)
+            {
+                if (X == other.X && Y == other.Y && Z == other.Z) return true;
+                else return false;
+            }
+            else return false;
+        }
+
+        public override int GetHashCode()
+        {
+            return X << 20 ^ Y << 10 ^ Z;
         }
     }
 }

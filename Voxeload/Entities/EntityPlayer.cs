@@ -12,7 +12,8 @@ namespace Voxeload.Entities
     {
         public EntityPlayer(Voxeload voxeload, Level level) : base(voxeload, level)
         {
-            SetPos(new(16, Chunk.Y_LENGTH, 16));
+            SetPos(new(16, Level.Y_LENGTH * Chunk.Y_LENGTH, 16));
+            YRotation = 135;
         }
 
         public override void Tick()

@@ -15,65 +15,83 @@ namespace Voxeload.Render
         protected Voxeload voxeload;
 
         Level level;
-        ChunkRenderer[,] renderers;
+        ChunkRenderer[,,] renderers;
 
-        LinkedList<(int x, int z)> chunksToReload = new();
+        LinkedList<(int x, int y, int z)> chunksToReload = new();
+
+        ChunkModeller modeller;
 
         public LevelRenderer(Voxeload voxeload, Level level)
         {
             this.voxeload = voxeload;
 
-            renderers = new ChunkRenderer[Level.Z_LENGTH, Level.X_LENGTH];
+            renderers = new ChunkRenderer[Level.Z_LENGTH, Level.Y_LENGTH, Level.X_LENGTH];
 
             for (int z = 0; z < Level.Z_LENGTH; z++)
             {
-                for (int x = 0; x < Level.X_LENGTH; x++)
+                for (int y = 0; y < Level.Y_LENGTH; y++)
                 {
-                    renderers[z, x] = new ChunkRenderer(voxeload);
-                    chunksToReload.AddLast((x, z));
+                    for (int x = 0; x < Level.X_LENGTH; x++)
+                    {
+                        renderers[z, y, x] = new ChunkRenderer(voxeload);
+                        chunksToReload.AddLast((x, y, z));
+                    }
                 }
             }
 
             this.level = level;
+
+            modeller = new(level);
         }
 
         public void Render()
         {
             int counter = 0;
-            while (chunksToReload.Count != 0 && counter < 4)
+            while (chunksToReload.Count > 0 && counter < 16) 
             {
-                (int x, int z) = chunksToReload.First.Value;
-                chunksToReload.RemoveFirst();
-
-                ChunkRenderer renderer = renderers[z, x];
-                renderer.X = x;
-                renderer.Z = z;
-                renderer.LoadChunk(level, level.GetChunk(x, z));
-
+                (int x, int y, int z) = chunksToReload.First.Value;
+                Chunk chunk = level.GetChunk(x, y, z);
+                if (chunk != null)
+                {
+                    modeller.Request(chunk);
+                    chunksToReload.RemoveFirst();
+                }
                 counter++;
             }
 
+            ChunkModel model;
+            counter = 0;
+            while (counter < 16 && (model = modeller.Receive()) != null)
+            {
+                renderers[model.Chunk.Z, model.Chunk.Y, model.Chunk.X].LoadChunkModel(model);
+                counter++;
+            }
+
+
             for (int z = 0; z < Level.Z_LENGTH; z++)
             {
-                for (int x = 0; x < Level.X_LENGTH; x++)
+                for (int y = 0; y < Level.Y_LENGTH; y++)
                 {
-                    ChunkRenderer renderer = renderers[z, x];
-                    Chunk chunk = level.GetChunk(x, z);
-
-                    if (chunk == null) continue;
-
-                    if (chunk.IsDirty)
+                    for (int x = 0; x < Level.X_LENGTH; x++)
                     {
-                        chunksToReload.AddFirst((x, z));
-                        chunk.IsDirty = false;
-                    }
+                        ChunkRenderer renderer = renderers[z, y, x];
+                        Chunk chunk = level.GetChunk(x, y, z);
 
-                    if (renderer.IsChunkLoaded == false && !chunksToReload.Contains((x, z)))
-                    {
-                        chunksToReload.AddFirst((x, z));
-                    }
+                        if (chunk == null) continue;
 
-                    renderer.Render(x, z);
+                        if (chunk.IsDirty)
+                        {
+                            chunksToReload.AddFirst((x, y, z));
+                            chunk.IsDirty = false;
+                        }
+
+                        //if (renderer.IsChunkLoaded == false && !chunksToReload.Contains((x, y, z)))
+                        //{
+                        //    chunksToReload.AddFirst((x, y, z));
+                        //}
+
+                        renderer.Render(x, y, z);
+                    }
                 }
             }
         }

@@ -10,99 +10,122 @@ namespace Voxeload.World
 {
     public class Level : ITileAccess
     {
-        public const int X_LENGTH = 32;
-        public const int Z_LENGTH = 32;
+        public const int X_LENGTH = 16;
+        public const int Y_LENGTH = 4;
+        public const int Z_LENGTH = 16;
 
-        public readonly Chunk[,] chunks = new Chunk[Z_LENGTH, X_LENGTH];
-        private IChunkGenerator generator;
-        private Queue<(int x, int z)> chunksToGenerate = new();
+        public readonly Chunk[,,] chunks = new Chunk[Z_LENGTH, Y_LENGTH, X_LENGTH];
+        private ChunkGenerator generator;
+        private Queue<(int x, int y, int z)> chunksToGenerate = new();
 
-        public Level(IChunkGenerator generator)
+        public Level(ILevelGenerator generator)
         {
-            this.generator = generator;
+            this.generator = new(this, generator);
         }
 
-        public Chunk GetChunk(int x, int z)
+        public Chunk GetChunk(int x, int y, int z)
         {
             if (x < 0 || x >= X_LENGTH) return null;
+            if (y < 0 || y >= Y_LENGTH) return null;
             if (z < 0 || z >= Z_LENGTH) return null;
 
-            Chunk chunk = chunks[z, x];
+            Chunk chunk = chunks[z, y, x];
 
-            if (chunk == null && chunksToGenerate.Contains((x, z)) == false) chunksToGenerate.Enqueue((x, z));
+            if (chunk == null && chunksToGenerate.Contains((x, y, z)) == false) chunksToGenerate.Enqueue((x, y, z));
 
             return chunk;
         }
 
         public void GenerateNextChunks()
         {
-            if (chunksToGenerate.Count == 0) return;
-
-            int numToGenerate = chunksToGenerate.Count / 5;
-            if (numToGenerate == 0) numToGenerate = 1;
-
-            for (int i = 0; i < numToGenerate; i++)
+            int counter = 0;
+            while (chunksToGenerate.Count > 0 && counter < 16)
             {
-                (int x, int z) = chunksToGenerate.Dequeue();
+                (int x, int y, int z) = chunksToGenerate.Dequeue();
 
-                chunks[z, x] = new(this, generator, x, z);
+                generator.Request(new(x, y, z));
+
+                counter++;
+            }
+
+            Chunk chunk;
+            counter = 0;
+            while (counter < 16 && (chunk = generator.Receive()) != null)
+            {
+                chunks[chunk.Z, chunk.Y, chunk.X] = chunk;
+                counter++;
             }
         }
 
         public byte GetTileID(int x, int y, int z)
         {
             if (x < 0 || x >= Level.X_LENGTH * Chunk.X_LENGTH) return 0;
-            if (y < 0 || y >= Chunk.Y_LENGTH) return 0;
+            if (y < 0 || y >= Level.Y_LENGTH * Chunk.Y_LENGTH) return 0;
             if (z < 0 || z >= Level.Z_LENGTH * Chunk.Z_LENGTH) return 0;
 
             int chunkX = x / Chunk.X_LENGTH;
+            int chunkY = y / Chunk.Y_LENGTH;
             int chunkZ = z / Chunk.Z_LENGTH;
             int tileX = x % Chunk.X_LENGTH;
+            int tileY = y % Chunk.Y_LENGTH;
             int tileZ = z % Chunk.Z_LENGTH;
 
             if (chunkX < 0 || chunkX >= Level.X_LENGTH) return 0;
+            if (chunkY < 0 || chunkY >= Level.X_LENGTH) return 0;
             if (chunkZ < 0 || chunkZ >= Level.Z_LENGTH) return 0; 
 
-            Chunk chunk = chunks[chunkZ, chunkX];
+            Chunk chunk = chunks[chunkZ, chunkY, chunkX];
             if (chunk == null) return 0;
 
-            return chunk.GetTileID(tileX, y, tileZ);
+            return chunk.GetTileID(tileX, tileY, tileZ);
         }
 
         public void SetTileID(int x, int y, int z, byte id)
         {
             if (x < 0 || x >= Level.X_LENGTH * Chunk.X_LENGTH) return;
-            if (y < 0 || y >= Chunk.Y_LENGTH) return;
+            if (y < 0 || y >= Level.Y_LENGTH * Chunk.Y_LENGTH) return;
             if (z < 0 || z >= Level.Z_LENGTH * Chunk.Z_LENGTH) return;
 
             int chunkX = x / Chunk.X_LENGTH;
+            int chunkY = y / Chunk.Y_LENGTH;
             int chunkZ = z / Chunk.Z_LENGTH;
             int tileX = x % Chunk.X_LENGTH;
+            int tileY = y % Chunk.Y_LENGTH;
             int tileZ = z % Chunk.Z_LENGTH;
 
-            Chunk chunk = chunks[chunkZ, chunkX];
+            Chunk chunk = chunks[chunkZ, chunkY, chunkX];
             if (chunk == null) return;
 
-            chunk.SetTileID(tileX, y, tileZ, id);
+            chunk.SetTileID(tileX, tileY, tileZ, id);
 
             if (tileX == 0 && chunkX > 0)
             {
-                Chunk otherChunk = chunks[chunkZ, chunkX - 1];
+                Chunk otherChunk = chunks[chunkZ, chunkY, chunkX - 1];
                 if (otherChunk != null) otherChunk.IsDirty = true;
             }
             else if (tileX == Chunk.X_LENGTH - 1 && chunkX < Level.X_LENGTH - 1)
             {
-                Chunk otherChunk = chunks[chunkZ, chunkX + 1];
+                Chunk otherChunk = chunks[chunkZ, chunkY, chunkX + 1];
+                if (otherChunk != null) otherChunk.IsDirty = true;
+            }
+            if (tileY == 0 && chunkY > 0)
+            {
+                Chunk otherChunk = chunks[chunkZ, chunkY - 1, chunkX];
+                if (otherChunk != null) otherChunk.IsDirty = true;
+            }
+            else if (tileY == Chunk.Y_LENGTH - 1 && chunkY < Level.Y_LENGTH - 1)
+            {
+                Chunk otherChunk = chunks[chunkZ, chunkY + 1, chunkX];
                 if (otherChunk != null) otherChunk.IsDirty = true;
             }
             if (tileZ == 0 && chunkZ > 0)
             {
-                Chunk otherChunk = chunks[chunkZ - 1, chunkX];
+                Chunk otherChunk = chunks[chunkZ - 1, chunkY, chunkX];
                 if (otherChunk != null) otherChunk.IsDirty = true;
             }
             else if (tileZ == Chunk.Z_LENGTH - 1 && chunkZ < Level.Z_LENGTH - 1)
             {
-                Chunk otherChunk = chunks[chunkZ + 1, chunkX];
+                Chunk otherChunk = chunks[chunkZ + 1, chunkY, chunkX];
                 if (otherChunk != null) otherChunk.IsDirty = true;
             }
         }
@@ -139,7 +162,7 @@ namespace Voxeload.World
             if (a.Y < 0) a.Y = 0;
             if (a.Z < 0) a.Z = 0;
             if (b.X > Level.X_LENGTH * Chunk.X_LENGTH) b.X = Level.X_LENGTH * Chunk.X_LENGTH;
-            if (b.Y > Chunk.Y_LENGTH) b.Y = Chunk.Y_LENGTH;
+            if (b.Y > Level.Y_LENGTH * Chunk.Y_LENGTH) b.Y = Level.Y_LENGTH * Chunk.Y_LENGTH;
             if (b.Z > Level.Z_LENGTH * Chunk.Z_LENGTH) b.Z = Level.Z_LENGTH * Chunk.Z_LENGTH;
 
             for (int z = a.Z; z < b.Z; z++)
