@@ -6,8 +6,8 @@ using System.Threading.Tasks;
 
 namespace Voxeload.World
 {
-    public interface ILevelGenerator
+    public interface IChunkGenerator
     {
-        public byte[,,] GenerateChunk(int x, int y, int z);
+        public byte[,,,] GenerateChunk(int chunkX, int chunkY, int chunkZ);
     }
 }

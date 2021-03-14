@@ -12,12 +12,13 @@ namespace Voxeload.World
         public const int X_LENGTH = 32;
         public const int Y_LENGTH = 32;
         public const int Z_LENGTH = 32;
+        public const int LAYER_COUNT = 2;
 
-        private readonly byte[,,] tiles;
+        private readonly byte[,,,] tiles;
 
         private readonly Level level;
 
-        public bool IsDirty { get; set; }
+        public bool[] IsDirty { get; set; } = new bool[2];
 
         public int X { get; }
         public int Y { get; }
@@ -25,7 +26,7 @@ namespace Voxeload.World
 
         public object chunkDataLock = new();
 
-        public Chunk(Level level, byte[,,] tiles, int x, int y, int z)
+        public Chunk(Level level, byte[,,,] tiles, int x, int y, int z)
         {
             this.tiles = tiles;
             this.level = level;
@@ -34,7 +35,7 @@ namespace Voxeload.World
             Z = z;
         }
 
-        public byte GetTileID(int x, int y, int z)
+        public byte GetTileID(int layer, int x, int y, int z)
         {
             if (x < 0 || x >= X_LENGTH) return 0;
             if (y < 0 || y >= Y_LENGTH) return 0;
@@ -42,11 +43,11 @@ namespace Voxeload.World
 
             lock (chunkDataLock)
             {
-                return tiles[z, y, x];
+                return tiles[layer, z, y, x];
             }
         }
 
-        public void SetTileID(int x, int y, int z, byte id)
+        public void SetTileID(int layer, int x, int y, int z, byte id)
         {
             if (x < 0 || x >= X_LENGTH) return;
             if (y < 0 || y >= Y_LENGTH) return;
@@ -54,20 +55,20 @@ namespace Voxeload.World
 
             lock (chunkDataLock)
             {
-                tiles[z, y, x] = id;
+                tiles[layer, z, y, x] = id;
             }
 
-            IsDirty = true;
+            IsDirty[layer] = true;
         }
 
-        public byte GetVisibleSides(int x, int y, int z)
+        public byte GetVisibleSides(int layer, int x, int y, int z)
         {
-            byte minusZ = GetTileID(x, y, z - 1);
-            byte plusZ = GetTileID(x, y, z + 1);
-            byte minusY = GetTileID(x, y - 1, z);
-            byte plusY = GetTileID(x, y + 1, z);
-            byte minusX = GetTileID(x - 1, y, z);
-            byte plusX = GetTileID(x + 1, y, z);
+            byte minusZ = GetTileID(layer,x, y, z - 1);
+            byte plusZ = GetTileID(layer, x, y, z + 1);
+            byte minusY = GetTileID(layer, x, y - 1, z);
+            byte plusY = GetTileID(layer, x, y + 1, z);
+            byte minusX = GetTileID(layer, x - 1, y, z);
+            byte plusX = GetTileID(layer, x + 1, y, z);
 
             byte sides = 0;
 

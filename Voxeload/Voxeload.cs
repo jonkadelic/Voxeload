@@ -16,8 +16,8 @@ namespace Voxeload
 {
     public class Voxeload : GameWindow
     {
-        protected ShaderProgramManager shaderProgramManager = new();
-        protected TextureManager textureManager = new();
+        public ShaderProgramManager ShaderProgramManager { get; } = new();
+        public TextureManager TextureManager { get; } = new();
         protected LevelRenderer levelRenderer;
         protected Level level;
 
@@ -39,22 +39,21 @@ namespace Voxeload
         public Voxeload(GameWindowSettings gws, NativeWindowSettings nws) : base(gws, nws)
         {
             ClientRectangle = new(256, 256, 640 + 256, 480 + 256);
-            level = new(new DefaultLevelGenerator());
+            level = new(new DefaultChunkGenerator());
             levelRenderer = new(this, level);
             player = new(this, level);
         }
 
         protected override void OnLoad()
         {
-            GL.ClearColor(0.347f, 0.789f, 0.851f, 1.0f);
             GL.Enable(EnableCap.DepthTest);
 
-            shaderProgramManager.LoadProgram("tile", new("Shaders/tile.vert", ShaderType.VertexShader), new("Shaders/tile.frag", ShaderType.FragmentShader));
-            shaderProgramManager.LoadProgram("selection", new("Shaders/selection.vert", ShaderType.VertexShader), new("Shaders/selection.frag", ShaderType.FragmentShader));
+            ShaderProgramManager.LoadProgram("tile", new("Shaders/tile.vert", ShaderType.VertexShader), new("Shaders/tile.frag", ShaderType.FragmentShader));
+            ShaderProgramManager.LoadProgram("frame", new("Shaders/frame.vert", ShaderType.VertexShader), new("Shaders/frame.frag", ShaderType.FragmentShader));
 
-            textureManager.LoadTexture("terrain", "Textures/terrain.png");
+            TextureManager.LoadTexture("terrain", "Textures/terrain.png");
 
-            lastClientSize = ClientSize;
+            lastClientSize = new(0, 0);
 
             CursorGrabbed = true;
 
@@ -81,56 +80,23 @@ namespace Voxeload
             base.OnUnload();
         }
 
-        bool wasGPressed = false;
-        bool wasXPressed = false;
         int breakCounter = 0, placeCounter = 0;
         double updateCounter = 0;
         protected override void OnUpdateFrame(FrameEventArgs args)
         {
             level.GenerateNextChunks();
 
-            if (KeyboardState.IsKeyDown(Keys.G))
-            {
-                if (!wasGPressed)
-                {
-                    foreach (Chunk chunk in level.chunks)
-                    {
-                        chunk.IsDirty = true;
-                    }
-                    wasGPressed = true;
-                }
-            }
-            else wasGPressed = false;
-            if (KeyboardState.IsKeyDown(Keys.X))
-            {
-                if (!wasXPressed)
-                {
-                    for (int z = (int)player.Pos.Z - 4; z < (int)player.Pos.Z + 4; z++)
-                    {
-                        for (int y = (int)player.Pos.Y - 4; y < (int)player.Pos.Y + 4; y++)
-                        {
-                            for (int x = (int)player.Pos.X - 4; x < (int)player.Pos.X + 4; x++)
-                            {
-                                level.SetTileID(x, y, z, 0);
-                            }
-                        }
-                    }
-                    wasXPressed = true;
-                }
-            }
-            else wasXPressed = false;
-
-            lookPos = RayCaster.CastIntoWorld(level, player.Pos, player.XRotation, player.YRotation, 5.0f, 0.05f);
+            lookPos = RayCaster.CastIntoWorld(level, 0, player.Pos, player.XRotation, player.YRotation, 5.0f, 0.05f);
 
             if (MouseState.IsButtonDown(MouseButton.Button1) && breakCounter == 0)
             {
                 if (lookPos.HasValue)
                 {
                     (Vector3i point, Tile.Face _) = lookPos.Value;
-                    byte id = level.GetTileID(point.X, point.Y, point.Z);
+                    byte id = level.GetTileID(0, point.X, point.Y, point.Z);
                     if (id != 0)
                     {
-                        level.SetTileID(point.X, point.Y, point.Z, 0);
+                        level.SetTileID(0, point.X, point.Y, point.Z, 0);
                     }
                 }
                 breakCounter = (int)UpdateFrequency / 4;
@@ -165,10 +131,10 @@ namespace Voxeload
                             placePoint.X++;
                             break;
                     }
-                    byte id = level.GetTileID(placePoint.X, placePoint.Y, placePoint.Z);
+                    byte id = level.GetTileID(0, placePoint.X, placePoint.Y, placePoint.Z);
                     if (id == 0 && !Tile.GetAABB(placePoint.X, placePoint.Y, placePoint.Z).Intersects(player.AABB))
                     {
-                        level.SetTileID(placePoint.X, placePoint.Y, placePoint.Z, 2);
+                        level.SetTileID(0, placePoint.X, placePoint.Y, placePoint.Z, 2);
                     }
                 }
                 placeCounter = (int)UpdateFrequency / 4;
@@ -196,20 +162,34 @@ namespace Voxeload
         {
             ErrorCode err = GL.GetError();
             if (err != ErrorCode.NoError) throw new Exception(err.ToString());
-            
+
+            GL.ClearColor(0.347f, 0.789f, 0.851f, 1.0f);
+            GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
+
             if (ClientSize != lastClientSize)
             {
                 GL.Viewport(0, 0, ClientSize.X, ClientSize.Y);
-            }
-            
-            GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
 
-            ActiveShader = shaderProgramManager.GetProgram("tile");
+                GL.BindTexture(TextureTarget.Texture2D, ChunkRenderer.watertexc);
+                GL.TexImage2D(TextureTarget.Texture2D, 0, PixelInternalFormat.Rgba, ClientSize.X, ClientSize.Y, 0, PixelFormat.Rgba, PixelType.Float, IntPtr.Zero);
+                GL.BindTexture(TextureTarget.Texture2D, ChunkRenderer.watertexd);
+                GL.TexImage2D(TextureTarget.Texture2D, 0, PixelInternalFormat.DepthComponent, ClientSize.X, ClientSize.Y, 0, PixelFormat.DepthComponent, PixelType.UnsignedInt, IntPtr.Zero);
+                GL.BindTexture(TextureTarget.Texture2D, 0);
+
+                GL.BindFramebuffer(FramebufferTarget.Framebuffer, ChunkRenderer.waterfbo);
+                GL.FramebufferTexture2D(FramebufferTarget.Framebuffer, FramebufferAttachment.ColorAttachment0, TextureTarget.Texture2D, ChunkRenderer.watertexc, 0);
+                GL.FramebufferTexture2D(FramebufferTarget.Framebuffer, FramebufferAttachment.DepthAttachment, TextureTarget.Texture2D, ChunkRenderer.watertexd, 0);
+                while (GL.CheckFramebufferStatus(FramebufferTarget.Framebuffer) != FramebufferErrorCode.FramebufferComplete) ;
+                GL.BindFramebuffer(FramebufferTarget.Framebuffer, 0);
+            }
+
+
+            ActiveShader = ShaderProgramManager.GetProgram("tile");
             ActiveShader.Use();
 
             ActiveShader.SetInt("texture0", 0);
 
-            textureManager.GetTexture("terrain").Use();
+            TextureManager.GetTexture("terrain").Use();
 
             model = Matrix4.Identity;
             view = Matrix4.CreateTranslation(-player.Pos) * Matrix4.CreateRotationY(MathHelper.DegreesToRadians(player.YRotation)) * Matrix4.CreateRotationX(MathHelper.DegreesToRadians(player.XRotation));

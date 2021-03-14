@@ -10,7 +10,7 @@ namespace Voxeload.Render
 {
     public static class RayCaster
     {
-        public static (Vector3i pos, Tile.Face face)? CastIntoWorld(Level level, Vector3 origin, float rotX, float rotY, float maxDistance, float step)
+        public static (Vector3i pos, Tile.Face face)? CastIntoWorld(Level level, int layer, Vector3 origin, float rotX, float rotY, float maxDistance, float step)
         {
             Vector4 point = new(origin, 1.0f);
             Vector4 offset = Matrix4.CreateRotationY(MathHelper.DegreesToRadians(rotY)) * Matrix4.CreateRotationX(MathHelper.DegreesToRadians(rotX)) * new Vector4(0, 0, -step, 1.0f);
@@ -19,7 +19,7 @@ namespace Voxeload.Render
             float distance = 0;
             while (distance < maxDistance)
             {
-                if (level.GetTileID((int)point.X, (int)point.Y, (int)point.Z) != 0)
+                if (level.GetTileID(layer, (int)point.X, (int)point.Y, (int)point.Z) != 0)
                 {
                     return (new Vector3i((int)point.X, (int)point.Y, (int)point.Z), lastFaceCrossed);
                 }

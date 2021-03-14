@@ -8,8 +8,8 @@ namespace Voxeload.World
 {
     public interface ITileAccess
     {
-        public byte GetTileID(int x, int y, int z);
-        byte GetVisibleSides(int x, int y, int z);
-        public void SetTileID(int x, int y, int z, byte id);
+        public byte GetTileID(int layer, int x, int y, int z);
+        byte GetVisibleSides(int layer, int x, int y, int z);
+        public void SetTileID(int layer, int x, int y, int z, byte id);
     }
 }

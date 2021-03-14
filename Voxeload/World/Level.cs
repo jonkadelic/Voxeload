@@ -18,7 +18,7 @@ namespace Voxeload.World
         private ChunkGenExchangeQueue generator;
         private Queue<(int x, int y, int z)> chunksToGenerate = new();
 
-        public Level(ILevelGenerator generator)
+        public Level(IChunkGenerator generator)
         {
             this.generator = new(this, generator);
         }
@@ -57,7 +57,7 @@ namespace Voxeload.World
             }
         }
 
-        public byte GetTileID(int x, int y, int z)
+        public byte GetTileID(int layer, int x, int y, int z)
         {
             if (x < 0 || x >= Level.X_LENGTH * Chunk.X_LENGTH) return 0;
             if (y < 0 || y >= Level.Y_LENGTH * Chunk.Y_LENGTH) return 0;
@@ -77,10 +77,10 @@ namespace Voxeload.World
             Chunk chunk = chunks[chunkZ, chunkY, chunkX];
             if (chunk == null) return 0;
 
-            return chunk.GetTileID(tileX, tileY, tileZ);
+            return chunk.GetTileID(layer, tileX, tileY, tileZ);
         }
 
-        public void SetTileID(int x, int y, int z, byte id)
+        public void SetTileID(int layer, int x, int y, int z, byte id)
         {
             if (x < 0 || x >= Level.X_LENGTH * Chunk.X_LENGTH) return;
             if (y < 0 || y >= Level.Y_LENGTH * Chunk.Y_LENGTH) return;
@@ -96,48 +96,48 @@ namespace Voxeload.World
             Chunk chunk = chunks[chunkZ, chunkY, chunkX];
             if (chunk == null) return;
 
-            chunk.SetTileID(tileX, tileY, tileZ, id);
+            chunk.SetTileID(layer, tileX, tileY, tileZ, id);
 
             if (tileX == 0 && chunkX > 0)
             {
                 Chunk otherChunk = chunks[chunkZ, chunkY, chunkX - 1];
-                if (otherChunk != null) otherChunk.IsDirty = true;
+                if (otherChunk != null) otherChunk.IsDirty[layer] = true;
             }
             else if (tileX == Chunk.X_LENGTH - 1 && chunkX < Level.X_LENGTH - 1)
             {
                 Chunk otherChunk = chunks[chunkZ, chunkY, chunkX + 1];
-                if (otherChunk != null) otherChunk.IsDirty = true;
+                if (otherChunk != null) otherChunk.IsDirty[layer] = true;
             }
             if (tileY == 0 && chunkY > 0)
             {
                 Chunk otherChunk = chunks[chunkZ, chunkY - 1, chunkX];
-                if (otherChunk != null) otherChunk.IsDirty = true;
+                if (otherChunk != null) otherChunk.IsDirty[layer] = true;
             }
             else if (tileY == Chunk.Y_LENGTH - 1 && chunkY < Level.Y_LENGTH - 1)
             {
                 Chunk otherChunk = chunks[chunkZ, chunkY + 1, chunkX];
-                if (otherChunk != null) otherChunk.IsDirty = true;
+                if (otherChunk != null) otherChunk.IsDirty[layer] = true;
             }
             if (tileZ == 0 && chunkZ > 0)
             {
                 Chunk otherChunk = chunks[chunkZ - 1, chunkY, chunkX];
-                if (otherChunk != null) otherChunk.IsDirty = true;
+                if (otherChunk != null) otherChunk.IsDirty[layer] = true;
             }
             else if (tileZ == Chunk.Z_LENGTH - 1 && chunkZ < Level.Z_LENGTH - 1)
             {
                 Chunk otherChunk = chunks[chunkZ + 1, chunkY, chunkX];
-                if (otherChunk != null) otherChunk.IsDirty = true;
+                if (otherChunk != null) otherChunk.IsDirty[layer] = true;
             }
         }
 
-        public byte GetVisibleSides(int x, int y, int z)
+        public byte GetVisibleSides(int layer, int x, int y, int z)
         {
-            byte minusZ = GetTileID(x, y, z - 1);
-            byte plusZ = GetTileID(x, y, z + 1);
-            byte minusY = GetTileID(x, y - 1, z);
-            byte plusY = GetTileID(x, y + 1, z);
-            byte minusX = GetTileID(x - 1, y, z);
-            byte plusX = GetTileID(x + 1, y, z);
+            byte minusZ = GetTileID(layer, x, y, z - 1);
+            byte plusZ = GetTileID(layer, x, y, z + 1);
+            byte minusY = GetTileID(layer, x, y - 1, z);
+            byte plusY = GetTileID(layer, x, y + 1, z);
+            byte minusX = GetTileID(layer, x - 1, y, z);
+            byte plusX = GetTileID(layer, x + 1, y, z);
 
             byte sides = 0;
 
@@ -151,7 +151,7 @@ namespace Voxeload.World
             return sides;
         }
 
-        public List<AABB> GetAABBs(AABB aabb)
+        public List<AABB> GetAABBs(int layer, AABB aabb)
         {
             List<AABB> aabbs = new();
 
@@ -171,7 +171,7 @@ namespace Voxeload.World
                 {
                     for (int x = a.X; x < b.X; x++)
                     {
-                        byte tile = GetTileID(x, y, z);
+                        byte tile = GetTileID(layer, x, y, z);
                         if (tile == 0) continue;
 
                         AABB c = new(new(x, y, z), new(x + 1, y + 1, z + 1));

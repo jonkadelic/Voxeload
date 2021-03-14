@@ -36,7 +36,7 @@ namespace Voxeload.Entities
         {
             Vector3 o = new(a);
 
-            List<AABB> aabbs = level.GetAABBs(AABB.Expand(a));
+            List<AABB> aabbs = level.GetAABBs(0, AABB.Expand(a));
 
             aabbs.Add(new(new(0, 0, 0), new(0, Level.Y_LENGTH * Chunk.Y_LENGTH, Level.Z_LENGTH * Chunk.Z_LENGTH)));
             aabbs.Add(new(new(0, 0, 0), new(Level.X_LENGTH * Chunk.X_LENGTH, Level.Y_LENGTH * Chunk.Y_LENGTH, 0)));

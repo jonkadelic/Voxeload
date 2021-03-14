@@ -11,9 +11,9 @@ namespace Voxeload.World
     public class ChunkGenExchangeQueue : ExchangeQueue<Vector3i, Chunk>
     {
         protected Level level;
-        protected ILevelGenerator generator;
+        protected IChunkGenerator generator;
 
-        public ChunkGenExchangeQueue(Level level, ILevelGenerator generator) : base(ThreadPriority.AboveNormal)
+        public ChunkGenExchangeQueue(Level level, IChunkGenerator generator) : base(ThreadPriority.AboveNormal)
         {
             this.level = level;
             this.generator = generator;
@@ -21,7 +21,7 @@ namespace Voxeload.World
 
         protected override Chunk Process(Vector3i pos)
         {
-            byte[,,] chunkData = generator.GenerateChunk(pos.X, pos.Y, pos.Z);
+            byte[,,,] chunkData = generator.GenerateChunk(pos.X, pos.Y, pos.Z);
 
             return new(level, chunkData, pos.X, pos.Y, pos.Z);
         }

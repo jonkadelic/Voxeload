@@ -17,5 +17,5 @@ void main()
 	else if (f == 0x08) mult = 1.0f;
 	else if (f == 0x10 || f == 0x20) mult = 0.7f;
 
-	colour = texture(texture0, texCoord) * mult;
+	colour = texture(texture0, texCoord) * vec4(mult, mult, mult, 1.0f);
 }

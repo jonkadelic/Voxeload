@@ -48,7 +48,8 @@ namespace Voxeload.World
         public static readonly Tile grass = new(1, new TextureTileAppearance(0, 2, 3));
         public static readonly Tile stone = new(2, new TextureTileAppearance(1));
         public static readonly Tile dirt = new(3, new TextureTileAppearance(2));
-        public static readonly Tile sand = new(4, new TextureTileAppearance(17));
-        public static readonly Tile gravel = new(5, new TextureTileAppearance(18));
+        public static readonly Tile sand = new(4, new TextureTileAppearance(18));
+        public static readonly Tile gravel = new(5, new TextureTileAppearance(19));
+        public static readonly Tile water = new(6, new TextureTileAppearance(205));
     }
 }

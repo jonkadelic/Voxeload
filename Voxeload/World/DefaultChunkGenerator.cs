@@ -8,15 +8,15 @@ using System.Threading.Tasks;
 
 namespace Voxeload.World
 {
-    public class DefaultLevelGenerator : ILevelGenerator
+    public class DefaultChunkGenerator : IChunkGenerator
     {
         Random rand = new();
 
         private int baseSeed = (int)DateTime.Now.Ticks;
 
-        public byte[,,] GenerateChunk(int chunkX, int chunkY, int chunkZ)
+        public byte[,,,] GenerateChunk(int chunkX, int chunkY, int chunkZ)
         {
-            byte[,,] tiles = new byte[Chunk.X_LENGTH, Chunk.Y_LENGTH, Chunk.Z_LENGTH];
+            byte[,,,] tiles = new byte[Chunk.LAYER_COUNT, Chunk.X_LENGTH, Chunk.Y_LENGTH, Chunk.Z_LENGTH];
 
             for (int tileZ = 0; tileZ < Chunk.Z_LENGTH; tileZ++)
             {
@@ -27,7 +27,7 @@ namespace Voxeload.World
 
                     // Generate base values
                     Noise.Seed = (int)(baseSeed ^ 0x1fc65241);
-                    float elevation = Noise.CalcPixel2D(worldX, worldZ, 0.001f) / 256.0f - 0.25f;
+                    float elevation = Noise.CalcPixel2D(worldX, worldZ, 0.001f) / 512.0f - 0.25f;
 
                     Noise.Seed = (int)(baseSeed ^ 0x94ae628d);
                     float roughness = Noise.CalcPixel2D(worldX, worldZ, 0.005f) / 256.0f - 0.5f;
@@ -58,17 +58,17 @@ namespace Voxeload.World
                             {
                                 if (Noise.CalcPixel2D(worldX, worldZ, 0.1f) < 128.0f)
                                 {
-                                    tiles[tileZ, tileY, tileX] = Tile.sand.ID;
+                                    tiles[0, tileZ, tileY, tileX] = Tile.sand.ID;
                                 }
                                 else
                                 {
-                                    tiles[tileZ, tileY, tileX] = Tile.gravel.ID;
+                                    tiles[0, tileZ, tileY, tileX] = Tile.gravel.ID;
                                 }
 
                             }
                             else
                             {
-                                tiles[tileZ, tileY, tileX] = Tile.dirt.ID;
+                                tiles[0, tileZ, tileY, tileX] = Tile.dirt.ID;
                             }
                         }
 
@@ -78,16 +78,16 @@ namespace Voxeload.World
                             {
                                 if (Noise.CalcPixel2D(worldX, worldZ, 0.1f) < 128.0f)
                                 {
-                                    tiles[tileZ, myTileY + 2, tileX] = Tile.sand.ID;
+                                    tiles[0, tileZ, myTileY + 2, tileX] = Tile.sand.ID;
                                 }
                                 else
                                 {
-                                    tiles[tileZ, myTileY + 2, tileX] = Tile.gravel.ID;
+                                    tiles[0, tileZ, myTileY + 2, tileX] = Tile.gravel.ID;
                                 }
                             }
                             else
                             {
-                                tiles[tileZ, myTileY + 2, tileX] = Tile.grass.ID;
+                                tiles[0, tileZ, myTileY + 2, tileX] = Tile.grass.ID;
                             }
                         }
                     }
@@ -95,14 +95,14 @@ namespace Voxeload.World
                     {
                         for (int tileY = 0; tileY < Chunk.Y_LENGTH; tileY++)
                         {
-                            tiles[tileZ, tileY, tileX] = Tile.stone.ID;
+                            tiles[0, tileZ, tileY, tileX] = Tile.stone.ID;
                         }
                     }
                     else
                     {
                         for (int tileY = 0; tileY < baseTileY; tileY++)
                         {
-                            tiles[tileZ, tileY, tileX] = Tile.stone.ID;
+                            tiles[0, tileZ, tileY, tileX] = Tile.stone.ID;
                         }
 
                         for (int tileY = baseTileY; tileY < baseTileY + 2 && tileY < Chunk.Y_LENGTH; tileY++)
@@ -111,17 +111,17 @@ namespace Voxeload.World
                             {
                                 if (Noise.CalcPixel2D(worldX, worldZ, 0.1f) < 128.0f)
                                 {
-                                    tiles[tileZ, tileY, tileX] = Tile.sand.ID;
+                                    tiles[0, tileZ, tileY, tileX] = Tile.sand.ID;
                                 }
                                 else
                                 {
-                                    tiles[tileZ, tileY, tileX] = Tile.gravel.ID;
+                                    tiles[0, tileZ, tileY, tileX] = Tile.gravel.ID;
                                 }
 
                             }
                             else
                             {
-                                tiles[tileZ, tileY, tileX] = Tile.dirt.ID;
+                                tiles[0, tileZ, tileY, tileX] = Tile.dirt.ID;
                             }
                         }
 
@@ -131,16 +131,16 @@ namespace Voxeload.World
                             {
                                 if (Noise.CalcPixel2D(worldX, worldZ, 0.1f) < 128.0f)
                                 {
-                                    tiles[tileZ, baseTileY + 2, tileX] = Tile.sand.ID;
+                                    tiles[0, tileZ, baseTileY + 2, tileX] = Tile.sand.ID;
                                 }
                                 else
                                 {
-                                    tiles[tileZ, baseTileY + 2, tileX] = Tile.gravel.ID;
+                                    tiles[0, tileZ, baseTileY + 2, tileX] = Tile.gravel.ID;
                                 }
                             }
                             else
                             {
-                                tiles[tileZ, baseTileY + 2, tileX] = Tile.grass.ID;
+                                tiles[0, tileZ, baseTileY + 2, tileX] = Tile.grass.ID;
                             }
                         }
                     }
@@ -154,7 +154,18 @@ namespace Voxeload.World
 
                         if (Noise.CalcPixel3D(worldX, worldY, worldZ, 0.1f) > 128 && Noise.CalcPixel3D(worldX, worldY, worldZ, 0.02f) > 192)
                         {
-                            tiles[tileZ, tileY, tileX] = 0;
+                            tiles[0, tileZ, tileY, tileX] = 0;
+                        }
+                    }
+
+                    // Do water
+                    for (int tileY = 0; tileY < Chunk.Y_LENGTH; tileY++)
+                    {
+                        int worldY = chunkY * Chunk.Y_LENGTH + tileY;
+
+                        if (worldY < 64 && tiles[0, tileZ, tileY, tileX] == 0)
+                        {
+                            tiles[1, tileZ, tileY, tileX] = Tile.water.ID;
                         }
                     }
 
