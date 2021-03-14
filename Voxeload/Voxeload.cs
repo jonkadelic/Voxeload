@@ -4,9 +4,11 @@ using OpenTK.Windowing.Common;
 using OpenTK.Windowing.Desktop;
 using OpenTK.Windowing.GraphicsLibraryFramework;
 using System;
+using System.Linq;
 using Voxeload.Entities;
 using Voxeload.Render;
 using Voxeload.Shaders;
+using Voxeload.Textures;
 using Voxeload.World;
 using ErrorCode = OpenTK.Graphics.OpenGL.ErrorCode;
 
@@ -15,6 +17,7 @@ namespace Voxeload
     public class Voxeload : GameWindow
     {
         protected ShaderProgramManager shaderProgramManager = new();
+        protected TextureManager textureManager = new();
         protected LevelRenderer levelRenderer;
         protected Level level;
 
@@ -36,18 +39,20 @@ namespace Voxeload
         public Voxeload(GameWindowSettings gws, NativeWindowSettings nws) : base(gws, nws)
         {
             ClientRectangle = new(256, 256, 640 + 256, 480 + 256);
-            level = new(new FlatLevelGenerator());
+            level = new(new DefaultLevelGenerator());
             levelRenderer = new(this, level);
             player = new(this, level);
         }
 
         protected override void OnLoad()
         {
-            GL.ClearColor(1.0F, 1.0F, 1.0F, 1.0F);
+            GL.ClearColor(0.347f, 0.789f, 0.851f, 1.0f);
             GL.Enable(EnableCap.DepthTest);
 
             shaderProgramManager.LoadProgram("tile", new("Shaders/tile.vert", ShaderType.VertexShader), new("Shaders/tile.frag", ShaderType.FragmentShader));
             shaderProgramManager.LoadProgram("selection", new("Shaders/selection.vert", ShaderType.VertexShader), new("Shaders/selection.frag", ShaderType.FragmentShader));
+
+            textureManager.LoadTexture("terrain", "Textures/terrain.png");
 
             lastClientSize = ClientSize;
 
@@ -55,7 +60,7 @@ namespace Voxeload
 
             lastMouseState = MouseState.GetSnapshot();
 
-            Model model = new CubeTileModel().GetModel(0b00111111);
+            Model model = new CubeTileModels().GetModel(0b00111111);
             Vector3[] vertices = new Vector3[model.Vertices.Length];
             model.Vertices.CopyTo(vertices, 0);
             for (int i = 0; i < vertices.Length; i++)
@@ -63,10 +68,10 @@ namespace Voxeload
                 vertices[i] -= new Vector3(0.5f);
                 vertices[i] *= 1.001f;
             }
-            selectionModel = new(vertices, model.Indices);
-            selectionModel.SetColours(new uint[] { 0x7FFFFFFF, 0x7FFFFFFF, 0x7FFFFFFF, 0x7FFFFFFF, 0x7FFFFFFF, 0x7FFFFFFF, 0x7FFFFFFF, 0x7FFFFFFF });
+            selectionModel = new(vertices);
+            selectionModel.SetColours(Enumerable.Repeat<uint>(0x7FFFFFFF, 36).ToArray());
 
-            updateCounter = RenderFrequency;
+            renderCounter = RenderFrequency;
 
             base.OnLoad();
         }
@@ -79,6 +84,7 @@ namespace Voxeload
         bool wasGPressed = false;
         bool wasXPressed = false;
         int breakCounter = 0, placeCounter = 0;
+        double updateCounter = 0;
         protected override void OnUpdateFrame(FrameEventArgs args)
         {
             level.GenerateNextChunks();
@@ -160,7 +166,7 @@ namespace Voxeload
                             break;
                     }
                     byte id = level.GetTileID(placePoint.X, placePoint.Y, placePoint.Z);
-                    if (id == 0)
+                    if (id == 0 && !Tile.GetAABB(placePoint.X, placePoint.Y, placePoint.Z).Intersects(player.AABB))
                     {
                         level.SetTileID(placePoint.X, placePoint.Y, placePoint.Z, 2);
                     }
@@ -175,10 +181,17 @@ namespace Voxeload
 
             player.Tick();
 
+            if (updateCounter < 0)
+            {
+                updateCounter = UpdateFrequency;
+                Console.WriteLine($"{1 / args.Time:F4} FPS, {player.Pos}");
+            }
+            updateCounter--;
+
             base.OnUpdateFrame(args);
         }
 
-        double updateCounter;
+        double renderCounter;
         protected override void OnRenderFrame(FrameEventArgs args)
         {
             ErrorCode err = GL.GetError();
@@ -193,6 +206,10 @@ namespace Voxeload
 
             ActiveShader = shaderProgramManager.GetProgram("tile");
             ActiveShader.Use();
+
+            ActiveShader.SetInt("texture0", 0);
+
+            textureManager.GetTexture("terrain").Use();
 
             model = Matrix4.Identity;
             view = Matrix4.CreateTranslation(-player.Pos) * Matrix4.CreateRotationY(MathHelper.DegreesToRadians(player.YRotation)) * Matrix4.CreateRotationX(MathHelper.DegreesToRadians(player.XRotation));
@@ -223,13 +240,6 @@ namespace Voxeload
             GL.Disable(EnableCap.CullFace);
 
             Context.SwapBuffers();
-
-            if (updateCounter < 0)
-            {
-                updateCounter = RenderFrequency;
-                Console.WriteLine($"{1 / args.Time:F4} FPS");
-            }
-            updateCounter--;
 
             base.OnRenderFrame(args);
         }

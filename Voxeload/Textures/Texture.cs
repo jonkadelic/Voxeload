@@ -33,12 +33,36 @@ namespace Voxeload.Textures
             // Generate texture
             handle = GL.GenTexture();
 
+            byte[] data = new byte[4 * Length * Length];
+
+            for (int y = 0; y < Length; y++)
+            {
+                var row = image.GetPixelRowSpan(y);
+                for (int x = 0; x < Length; x++)
+                {
+                    data[y * Length * 4 + x * 4 + 0] = row[x].R;
+                    data[y * Length * 4 + x * 4 + 1] = row[x].G;
+                    data[y * Length * 4 + x * 4 + 2] = row[x].B;
+                    data[y * Length * 4 + x * 4 + 3] = row[x].A;
+                }
+            }
+
+            // Bind
+            GL.BindTexture(TextureTarget.Texture2D, handle);
+
+            GL.TexParameterI(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, new[] { (int)TextureWrapMode.Repeat });
+            GL.TexParameterI(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, new[] { (int)TextureWrapMode.Repeat });
+            GL.TexParameterI(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, new[] { (int)TextureMinFilter.Nearest });
+            GL.TexParameterI(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, new[] { (int)TextureMagFilter.Nearest });
+
+
             // Set texture data
-            GL.TexImage2D(TextureTarget.Texture2D, 0, PixelInternalFormat.Rgba, Length, Length, 0, PixelFormat.Rgba, PixelType.UnsignedByte, image.GetPixelMemoryGroup().ToArray());
+            GL.TexImage2D(TextureTarget.Texture2D, 0, PixelInternalFormat.Rgba, Length, Length, 0, PixelFormat.Rgba, PixelType.UnsignedByte, data);
         }
 
-        public void Use()
+        public void Use(TextureUnit unit = TextureUnit.Texture0)
         {
+            GL.ActiveTexture(unit);
             GL.BindTexture(TextureTarget.Texture2D, handle);
         }
     }

@@ -10,12 +10,10 @@ namespace Voxeload.Render
     public class Model
     {
         public Vector3[] Vertices { get; }
-        public uint[] Indices { get; }
 
-        public Model(Vector3[] vertices, uint[] indices)
+        public Model(Vector3[] vertices)
         {
             Vertices = vertices;
-            Indices = indices;
         }
     }
 }

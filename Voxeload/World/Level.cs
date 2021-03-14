@@ -15,7 +15,7 @@ namespace Voxeload.World
         public const int Z_LENGTH = 16;
 
         public readonly Chunk[,,] chunks = new Chunk[Z_LENGTH, Y_LENGTH, X_LENGTH];
-        private ChunkGenerator generator;
+        private ChunkGenExchangeQueue generator;
         private Queue<(int x, int y, int z)> chunksToGenerate = new();
 
         public Level(ILevelGenerator generator)
@@ -39,7 +39,7 @@ namespace Voxeload.World
         public void GenerateNextChunks()
         {
             int counter = 0;
-            while (chunksToGenerate.Count > 0 && counter < 16)
+            while (chunksToGenerate.Count > 0 && counter < 1)
             {
                 (int x, int y, int z) = chunksToGenerate.Dequeue();
 
@@ -50,7 +50,7 @@ namespace Voxeload.World
 
             Chunk chunk;
             counter = 0;
-            while (counter < 16 && (chunk = generator.Receive()) != null)
+            while (counter < 1 && (chunk = generator.Receive()) != null)
             {
                 chunks[chunk.Z, chunk.Y, chunk.X] = chunk;
                 counter++;

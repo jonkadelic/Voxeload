@@ -8,16 +8,16 @@ using Voxeload.World;
 
 namespace Voxeload.Render
 {
-    public class ChunkModel : Model
+    public class ChunkModel : TexturedModel
     {
-        public byte[] Colours { get; }
-
         public Chunk Chunk { get; }
 
-        public ChunkModel(Chunk chunk, Vector3[] vertices, uint[] indices, byte[] colours) : base(vertices, indices)
+        public byte[] Faces { get; }
+
+        public ChunkModel(Chunk chunk, Vector3[] vertices, Vector2[] uvs, byte[] faces) : base(vertices, uvs)
         {
             Chunk = chunk;
-            Colours = colours;
+            Faces = faces;
         }
     }
 }

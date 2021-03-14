@@ -9,66 +9,17 @@ using Voxeload.World;
 
 namespace Voxeload.Render
 {
-    public class ChunkMogffdeller
+    public class ChunkRenderExchangeQueue : ExchangeQueue<Chunk, ChunkModel>
     {
-        protected Queue<Chunk> chunksToModel = new();
-        protected Queue<ChunkModel> completedModels = new();
-        protected bool stopping = false;
         protected Level level;
-        protected object lockObject = new();
 
-        public ChunkModeller(Level level)
+        public ChunkRenderExchangeQueue(Level level) : base(ThreadPriority.AboveNormal)
         {
             this.level = level;
-            Thread t = new(() => Run());
-            t.IsBackground = true;
-            t.Priority = ThreadPriority.AboveNormal;
-            t.Start();
         }
 
-        protected void Run()
+        protected override ChunkModel Process(Chunk chunk)
         {
-            while (!stopping)
-            {
-                if (chunksToModel.Count > 0)
-                {
-                    Chunk chunk;
-                    lock (lockObject)
-                    {
-                        chunk = chunksToModel.Dequeue();
-                    }
-                    LoadChunk(chunk);
-                }
-            }
-        }
-
-        public bool Request(Chunk chunk)
-        {
-            if (!chunksToModel.Contains(chunk))
-            {
-                lock (lockObject)
-                {
-                    chunksToModel.Enqueue(chunk);
-                }
-                return true;
-            }
-            else return false;
-        }
-
-        public ChunkModel Receive()
-        {
-            if (completedModels.Count > 0)
-            {
-                return completedModels.Dequeue();
-            }
-
-            return null;
-        }
-
-        protected void LoadChunk(Chunk chunk)
-        {
-            if (chunk == null) return;
-
             List<Vector3> vertices = new();
             List<Vector2> uvs = new();
             List<byte> faces = new();
@@ -114,7 +65,7 @@ namespace Voxeload.Render
                 }
             }
 
-            completedModels.Enqueue(new(chunk, vertices.ToArray(), uvs.ToArray(), faces.ToArray()));
+            return new(chunk, vertices.ToArray(), uvs.ToArray(), faces.ToArray());
         }
     }
 }

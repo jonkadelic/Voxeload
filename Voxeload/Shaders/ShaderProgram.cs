@@ -28,11 +28,21 @@ namespace Voxeload.Shaders
             }
 
             GL.LinkProgram(Handle);
+            GL.GetProgram(Handle, GetProgramParameterName.LinkStatus, out int result);
+
+            if (result == 0) throw new Exception(GL.GetProgramInfoLog(Handle));
         }
 
         public void Use()
         {
             GL.UseProgram(Handle);
+        }
+
+        public void SetInt(string name, int value)
+        {
+            int location = GL.GetUniformLocation(Handle, name);
+
+            GL.Uniform1(location, value);
         }
 
         protected virtual void Dispose(bool disposing)

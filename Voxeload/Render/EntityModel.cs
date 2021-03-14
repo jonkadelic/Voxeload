@@ -15,12 +15,12 @@ namespace Voxeload.Render
         private int ebo;
         private int cbo;
 
-        public EntityModel(Model model) : this(model.Vertices, model.Indices)
+        public EntityModel(Model model) : this(model.Vertices)
         {
 
         }
 
-        public EntityModel(Vector3[] vertices, uint[] indices) : base(vertices, indices)
+        public EntityModel(Vector3[] vertices) : base(vertices)
         {
             List<byte> colours = new();
 
@@ -46,9 +46,6 @@ namespace Voxeload.Render
             GL.VertexAttribPointer(1, 4, VertexAttribPointerType.UnsignedByte, true, 4 * sizeof(byte), 0);
             GL.EnableVertexAttribArray(1);
 
-            GL.BindBuffer(BufferTarget.ElementArrayBuffer, ebo);
-            GL.BufferData(BufferTarget.ElementArrayBuffer, indices.Length * sizeof(uint), indices, BufferUsageHint.StaticDraw);
-
             GL.BindVertexArray(0);
         }
 
@@ -71,7 +68,7 @@ namespace Voxeload.Render
         public virtual void Render()
         {
             GL.BindVertexArray(vao);
-            GL.DrawElements(PrimitiveType.Triangles, Indices.Length, DrawElementsType.UnsignedInt, 0);
+            GL.DrawArrays(PrimitiveType.Triangles, 0, Vertices.Length);
         }
     }
 }

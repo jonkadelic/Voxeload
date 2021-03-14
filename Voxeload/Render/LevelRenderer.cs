@@ -19,7 +19,7 @@ namespace Voxeload.Render
 
         LinkedList<(int x, int y, int z)> chunksToReload = new();
 
-        ChunkModeller modeller;
+        ChunkRenderExchangeQueue modeller;
 
         public LevelRenderer(Voxeload voxeload, Level level)
         {

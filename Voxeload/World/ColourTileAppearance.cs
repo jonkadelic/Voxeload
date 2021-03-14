@@ -6,25 +6,25 @@ using System.Threading.Tasks;
 
 namespace Voxeload.World
 {
-    public class DefaultTileAppearance : ITileAppearance
+    public class ColourTileAppearance : ITileAppearance
     {
         private readonly Dictionary<Tile.Face, uint> colours = new();
 
         public uint this[Tile.Face face] => colours[face];
 
-        public DefaultTileAppearance(uint colour) : this(colour, colour, colour, colour, colour, colour)
+        public ColourTileAppearance(uint colour) : this(colour, colour, colour, colour, colour, colour)
         {
         }
 
-        public DefaultTileAppearance(uint topBottom, uint sides) : this(sides, sides, topBottom, topBottom, sides, sides)
+        public ColourTileAppearance(uint topBottom, uint sides) : this(sides, sides, topBottom, topBottom, sides, sides)
         {
         }
 
-        public DefaultTileAppearance(uint top, uint bottom, uint sides) : this(sides, sides, bottom, top, sides, sides)
+        public ColourTileAppearance(uint top, uint bottom, uint sides) : this(sides, sides, bottom, top, sides, sides)
         {
         }
 
-        public DefaultTileAppearance(uint north, uint south, uint bottom, uint top, uint west, uint east)
+        public ColourTileAppearance(uint north, uint south, uint bottom, uint top, uint west, uint east)
         {
             colours[Tile.Face.North] = north;
             colours[Tile.Face.South] = south;

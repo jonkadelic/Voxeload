@@ -37,11 +37,11 @@ namespace Voxeload.Entities
             }
             if (voxeload.KeyboardState.IsKeyDown(Keys.Space) && OnGround)
             {
-                PosDelta.Y = 0.375f;
+                PosDelta.Y = 0.2f;
             }
 
             MoveRelative(xa, ya, OnGround ? 0.05f : 0.01f);
-            PosDelta.Y = (float)(PosDelta.Y - 0.04);
+            PosDelta.Y = (float)(PosDelta.Y - 0.01);
             Move(PosDelta);
 
             PosDelta.X *= 0.91f;

@@ -8,10 +8,13 @@ using Voxeload.World;
 
 namespace Voxeload.Render
 {
-    public abstract class BaseTileModel
+    public class TexturedModel : Model
     {
-        public abstract Model GetModel(byte sides);
+        public Vector2[] UVs { get; }
 
-        public abstract byte[] GetColours(ITileAppearance appearance, byte sides);
+        public TexturedModel(Vector3[] vertices, Vector2[] uvs) : base(vertices)
+        {
+            UVs = uvs;
+        }
     }
 }

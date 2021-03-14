@@ -8,16 +8,13 @@ namespace Voxeload.Shaders
 {
     public class ShaderProgramManager
     {
-        public Dictionary<string, ShaderProgram> programs = new();
+        protected Dictionary<string, ShaderProgram> programs = new();
 
         public void LoadProgram(string name, params Shader[] shaders)
         {
-            ShaderProgram sp = new(shaders);
+            if (programs.ContainsKey(name)) throw new ArgumentException($"Shader with name {name} is already loaded!");
 
-            if (programs.ContainsKey(name))
-            {
-                throw new Exception($"Shader with name {name} is already loaded!");
-            }
+            ShaderProgram sp = new(shaders);
 
             programs[name] = sp;
         }

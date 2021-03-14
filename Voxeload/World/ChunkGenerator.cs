@@ -8,13 +8,14 @@ using System.Threading.Tasks;
 
 namespace Voxeload.World
 {
-    public class ChunkGenerator
+    public class ChundskGenerator
     {
         protected Queue<Vector3i> chunksToGenerate = new();
         protected Queue<Chunk> completedChunks = new();
         protected bool stopping = false;
         protected Level level;
-        protected object lockObject = new();
+        protected object toGenerateLock = new();
+        protected object completedLock = new();
         protected ILevelGenerator generator;
 
         public ChunkGenerator(Level level, ILevelGenerator generator)
@@ -33,15 +34,12 @@ namespace Voxeload.World
             {
                 if (chunksToGenerate.Count > 0)
                 {
-                    lock(lockObject)
+                    Vector3i pos;
+                    lock (toGenerateLock)
                     {
-                        Vector3i pos;
-                        lock (lockObject)
-                        {
-                            pos = chunksToGenerate.Dequeue();
-                        }
-                        GenerateChunk(pos);
+                        pos = chunksToGenerate.Dequeue();
                     }
+                    GenerateChunk(pos);
                 }
             }
         }
@@ -50,7 +48,7 @@ namespace Voxeload.World
         {
             if (!chunksToGenerate.Contains(pos))
             {
-                lock (lockObject)
+                lock (toGenerateLock)
                 {
                     chunksToGenerate.Enqueue(pos);
                 }
@@ -63,7 +61,10 @@ namespace Voxeload.World
         {
             if (completedChunks.Count > 0)
             {
-                return completedChunks.Dequeue();
+                lock (completedLock)
+                {
+                    return completedChunks.Dequeue();
+                }
             }
 
             return null;
@@ -75,7 +76,7 @@ namespace Voxeload.World
 
             Chunk chunk = new(level, chunkData, pos.X, pos.Y, pos.Z);
 
-            lock (lockObject)
+            lock (completedLock)
             {
                 completedChunks.Enqueue(chunk);
             }
