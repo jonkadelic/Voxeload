@@ -12,16 +12,18 @@ namespace Voxeload.World
     {
         protected Level level;
         protected IChunkGenerator generator;
+        protected List<(Vector3i pos, byte tile)> structureBuffer;
 
-        public ChunkGenExchangeQueue(Level level, IChunkGenerator generator) : base(ThreadPriority.AboveNormal)
+        public ChunkGenExchangeQueue(ref List<(Vector3i pos, byte tile)> structureBuffer, Level level, IChunkGenerator generator) : base(ThreadPriority.AboveNormal)
         {
             this.level = level;
             this.generator = generator;
+            this.structureBuffer = structureBuffer;
         }
 
         protected override Chunk Process(Vector3i pos)
         {
-            byte[,,,] chunkData = generator.GenerateChunk(pos.X, pos.Y, pos.Z);
+            byte[,,,] chunkData = generator.GenerateChunk(ref structureBuffer, pos.X, pos.Y, pos.Z);
 
             return new(level, chunkData, pos.X, pos.Y, pos.Z);
         }

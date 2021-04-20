@@ -18,7 +18,8 @@ namespace Voxeload.Render
         Level level;
         ChunkRenderer[,,] renderers;
 
-        LinkedList<(int x, int y, int z)> chunksToReload = new();
+        List<(int x, int y, int z)> chunksToReload = new();
+        List<(int x, int y, int z)> chunksToDraw = new();
 
         ChunkRenderExchangeQueue modeller;
 
@@ -35,7 +36,8 @@ namespace Voxeload.Render
                     for (int x = 0; x < Level.X_LENGTH; x++)
                     {
                         renderers[z, y, x] = new ChunkRenderer(voxeload);
-                        chunksToReload.AddLast((x, y, z));
+                        chunksToReload.Add((x, y, z));
+                        chunksToDraw.Add((x, y, z));
                     }
                 }
             }
@@ -47,15 +49,17 @@ namespace Voxeload.Render
 
         public void Render()
         {
+            //chunksToDraw.Sort(new ChunkToRenderComparator(voxeload.player.Pos));
+
             int counter = 0;
             while (chunksToReload.Count > 0 && counter < 16) 
             {
-                (int x, int y, int z) = chunksToReload.First.Value;
+                (int x, int y, int z) = chunksToReload[0];
                 Chunk chunk = level.GetChunk(x, y, z);
                 if (chunk != null)
                 {
                     modeller.Request(chunk);
-                    chunksToReload.RemoveFirst();
+                    chunksToReload.RemoveAt(0);
                 }
                 counter++;
             }
@@ -68,45 +72,28 @@ namespace Voxeload.Render
                 counter++;
             }
 
+            voxeload.FramebufferManager.GetFramebuffer("tiles").Use();
 
-            for (int z = 0; z < Level.Z_LENGTH; z++)
+            foreach ((int x, int y, int z) in chunksToDraw)
             {
-                for (int y = 0; y < Level.Y_LENGTH; y++)
+                ChunkRenderer renderer = renderers[z, y, x];
+                Chunk chunk = level.GetChunk(x, y, z);
+
+                if (chunk == null) continue;
+
+                for (int l = 0; l < Chunk.LAYER_COUNT; l++)
                 {
-                    for (int x = 0; x < Level.X_LENGTH; x++)
+                    if (chunk.IsDirty[l])
                     {
-                        ChunkRenderer renderer = renderers[z, y, x];
-                        Chunk chunk = level.GetChunk(x, y, z);
-
-                        if (chunk == null) continue;
-
-                        if (chunk.IsDirty[0])
-                        {
-                            chunksToReload.AddFirst((x, y, z));
-                            chunk.IsDirty[0] = false;
-                        }
-
-                        renderer.Render(x, y, z);
+                        chunksToReload.Insert(0, (x, y, z));
+                        chunk.IsDirty[l] = false;
                     }
                 }
+
+                renderer.Render(x, y, z);
             }
 
-            // Draw framebuffer to screen
-            voxeload.ShaderProgramManager.GetProgram("frame").Use();
-            GL.BindVertexArray(ChunkRenderer.screenvao);
-            //GL.Disable(EnableCap.DepthTest);
-            GL.BindTexture(TextureTarget.Texture2D, ChunkRenderer.watertexc);
-            GL.Enable(EnableCap.Blend);
-            GL.BlendFunc(BlendingFactor.SrcAlpha, BlendingFactor.OneMinusSrcAlpha);
-            GL.DrawArrays(PrimitiveType.Triangles, 0, 6);
-            GL.Disable(EnableCap.Blend);
-            //GL.Enable(EnableCap.DepthTest);
-            voxeload.ActiveShader.Use();
-
-            GL.BindFramebuffer(FramebufferTarget.Framebuffer, ChunkRenderer.waterfbo);
-            GL.ClearColor(0.0f, 0.0f, 0.0f, 0.0f);
-            GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
-            GL.BindFramebuffer(FramebufferTarget.Framebuffer, 0);
+            Framebuffer.Disuse();
         }
 
 

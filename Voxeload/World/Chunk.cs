@@ -55,8 +55,10 @@ namespace Voxeload.World
 
             lock (chunkDataLock)
             {
+                //Console.WriteLine($"Set tile at {x}, {y}, {z} in chunk {X}, {Y}, {Z} from {tiles[layer, z, y, x]} to {id}.");
                 tiles[layer, z, y, x] = id;
             }
+
 
             IsDirty[layer] = true;
         }
@@ -95,6 +97,28 @@ namespace Voxeload.World
         public override int GetHashCode()
         {
             return X << 20 ^ Y << 10 ^ Z;
+        }
+
+        public void TickTiles(int counter)
+        {
+            for (int l = 0; l < Chunk.LAYER_COUNT; l++)
+            {
+                for (int z = 0; z < Chunk.Z_LENGTH; z++)
+                {
+                    for (int y = 0; y < Chunk.Y_LENGTH; y++)
+                    {
+                        for (int x = 0; x < Chunk.X_LENGTH; x++)
+                        {
+                            Tile tile = Tile.tiles[GetTileID(l, x, y, z)];
+                            if (tile.TickInterval == -1) continue;
+                            if (counter % tile.TickInterval == 0)
+                            {
+                                tile.OnTick(level, this.X * X_LENGTH + x, this.Y * Y_LENGTH + y, this.Z * Z_LENGTH + z);
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 }

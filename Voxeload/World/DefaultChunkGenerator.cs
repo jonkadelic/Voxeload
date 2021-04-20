@@ -1,4 +1,5 @@
-﻿using OpenTK.Graphics.ES30;
+﻿using OpenTK.Mathematics;
+
 using SimplexNoise;
 using System;
 using System.Collections.Generic;
@@ -10,13 +11,15 @@ namespace Voxeload.World
 {
     public class DefaultChunkGenerator : IChunkGenerator
     {
-        Random rand = new();
+        JavaImports.Random rand;
 
-        private int baseSeed = (int)DateTime.Now.Ticks;
+        private static int baseSeed = (int)DateTime.Now.Ticks;
 
-        public byte[,,,] GenerateChunk(int chunkX, int chunkY, int chunkZ)
+        public byte[,,,] GenerateChunk(ref List<(Vector3i pos, byte tile)> structureBuffer, int chunkX, int chunkY, int chunkZ)
         {
-            byte[,,,] tiles = new byte[Chunk.LAYER_COUNT, Chunk.X_LENGTH, Chunk.Y_LENGTH, Chunk.Z_LENGTH];
+            rand = new(baseSeed);
+
+            byte[,,,] tiles = new byte[Chunk.LAYER_COUNT, Chunk.Z_LENGTH, Chunk.Y_LENGTH, Chunk.X_LENGTH];
 
             for (int tileZ = 0; tileZ < Chunk.Z_LENGTH; tileZ++)
             {
@@ -27,13 +30,13 @@ namespace Voxeload.World
 
                     // Generate base values
                     Noise.Seed = (int)(baseSeed ^ 0x1fc65241);
-                    float elevation = Noise.CalcPixel2D(worldX, worldZ, 0.001f) / 512.0f - 0.25f;
+                    float elevation = Noise.CalcPixel2D(worldX, worldZ, 0.002f) / 512.0f - 0.25f;
 
                     Noise.Seed = (int)(baseSeed ^ 0x94ae628d);
                     float roughness = Noise.CalcPixel2D(worldX, worldZ, 0.005f) / 256.0f - 0.5f;
 
                     Noise.Seed = (int)(baseSeed ^ 0xfc6d5abb);
-                    float detail = Noise.CalcPixel2D(worldX, worldZ, 0.1f) / 1024.0f - 0.125f;
+                    float detail = Noise.CalcPixel2D(worldX, worldZ, 0.05f) / 1024.0f - 0.125f;
 
                     int baseY = (int)((elevation + (roughness * detail)) * 64 + 64);
 
@@ -41,7 +44,7 @@ namespace Voxeload.World
                     if (Noise.CalcPixel2D(worldX, worldZ, 0.005f) < 96)
                     {
                         Noise.Seed = (int)(baseSeed ^ 0xcf02e105);
-                        int offset = (int)((Noise.CalcPixel2D(worldX, worldZ, 0.01f) / 256.0f) * 8);
+                        int offset = (int)((Noise.CalcPixel2D(worldX, worldZ, 0.01f) / 256.0f) * 12);
                         baseY += offset;
                     }
 
@@ -145,6 +148,17 @@ namespace Voxeload.World
                         }
                     }
 
+                    // Do water
+                    for (int tileY = 0; tileY < Chunk.Y_LENGTH; tileY++)
+                    {
+                        int worldY = chunkY * Chunk.Y_LENGTH + tileY;
+
+                        if (worldY < 64 && tiles[0, tileZ, tileY, tileX] == 0)
+                        {
+                            tiles[1, tileZ, tileY, tileX] = Tile.water.ID;
+                        }
+                    }
+
                     // Do cave carving
                     for (int tileY = 0; tileY < Chunk.Y_LENGTH; tileY++)
                     {
@@ -158,21 +172,42 @@ namespace Voxeload.World
                         }
                     }
 
-                    // Do water
-                    for (int tileY = 0; tileY < Chunk.Y_LENGTH; tileY++)
+                    int pix = (int)Noise.CalcPixel2D(worldX, worldZ, 0.005f);
+                    if (Noise.CalcPixel2D(worldX, worldZ, 0.03f) > 128 &&  rand.NextInt(pix) >= pix - 1)
                     {
-                        int worldY = chunkY * Chunk.Y_LENGTH + tileY;
 
-                        if (worldY < 64 && tiles[0, tileZ, tileY, tileX] == 0)
+                        if (baseTileY + 2 > 0 && baseTileY + 2 < Chunk.Y_LENGTH - 1 && tiles[0, tileZ, baseTileY + 2, tileX] == Tile.grass.ID)
                         {
-                            tiles[1, tileZ, tileY, tileX] = Tile.water.ID;
+                            // Place tree
+                            TreeStructure tree = new(rand, new(worldX, worldZ, baseY + 2));
+
+                            PlaceStructure(ref structureBuffer, tree, new(worldX, baseY + 3, worldZ));
+
                         }
                     }
-
                 }
             }
 
             return tiles;
+        }
+
+        protected void PlaceStructure(ref List<(Vector3i pos, byte tile)> structureBuffer, BaseStructure structure, Vector3i origin)
+        {
+            for (int z = 0; z < structure.LengthZ; z++)
+            {
+                for (int y = 0; y < structure.LengthY; y++)
+                {
+                    for (int x = 0; x < structure.LengthX; x++)
+                    {
+                        Vector3i pos = new(x + origin.X + structure.Offset.X, y + origin.Y + structure.Offset.Y, z + origin.Z + structure.Offset.Z);
+                        byte tile = structure.GetTileAt(new(x, y, z)).ID;
+
+                        if (tile == 0) continue;
+
+                        structureBuffer.Add((pos, tile));
+                    }
+                }
+            }
         }
     }
 }

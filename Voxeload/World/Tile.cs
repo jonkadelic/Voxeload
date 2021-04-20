@@ -23,9 +23,13 @@ namespace Voxeload.World
 
         public byte ID { get; }
 
-        public ITileAppearance TileAppearance { get; }
+        public virtual ITileAppearance TileAppearance { get; }
 
-        public BaseTileModels TileModel { get; } = new CubeTileModels();
+        public virtual BaseTileModels TileModel { get; } = new CubeTileModels();
+
+        public virtual bool Collides { get; } = true;
+
+        public virtual int TickInterval { get; } = -1;
 
         public Tile(byte id, ITileAppearance appearance)
         {
@@ -44,12 +48,26 @@ namespace Voxeload.World
             return new AABB(new(x, y, z), new(x + 1, y + 1, z + 1));
         }
 
+        public virtual void OnUpdate(Level level, int x, int y, int z)
+        {
+        }
+
+        public virtual void OnTick(Level level, int x, int y, int z)
+        {
+        }
+
         public static readonly Tile[] tiles = new Tile[256];
+        public static readonly TileTransparent air = new(0, null);
         public static readonly Tile grass = new(1, new TextureTileAppearance(0, 2, 3));
-        public static readonly Tile stone = new(2, new TextureTileAppearance(1));
-        public static readonly Tile dirt = new(3, new TextureTileAppearance(2));
-        public static readonly Tile sand = new(4, new TextureTileAppearance(18));
-        public static readonly Tile gravel = new(5, new TextureTileAppearance(19));
-        public static readonly Tile water = new(6, new TextureTileAppearance(205));
+        public static readonly Tile stone = new(2, 1);
+        public static readonly Tile dirt = new(3, 2);
+        public static readonly Tile planks = new(4, 4);
+        public static readonly TileFalling sand = new(5, 18);
+        public static readonly TileFalling gravel = new(6, 19);
+        public static readonly TileWater water = new(7, new TextureTileAppearance(205));
+        public static readonly TileTransparent glass = new(8, new TextureTileAppearance(49));
+        public static readonly Tile log = new(9, new TextureTileAppearance(21, 20));
+        public static readonly TileTransparent leaves = new(10, new TextureTileAppearance(52));
+        public static readonly TileFlower roseFlower = new(11, new TextureTileAppearance(12));
     }
 }

@@ -21,7 +21,12 @@ namespace Voxeload.Textures
 
         public Texture GetTexture(string name)
         {
-            return textures[name];
+            if (textures.TryGetValue(name, out Texture texture))
+            {
+                return texture;
+            }
+
+            return null;
         }
     }
 }

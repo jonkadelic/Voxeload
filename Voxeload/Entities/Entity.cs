@@ -17,6 +17,7 @@ namespace Voxeload.Entities
         public float XRotation = 0;
         public float YRotation = 0;
         public bool OnGround = false;
+        public bool InWater = false;
         protected float aabbWidth = 0.6f;
         protected float aabbHeight = 1.8f;
         public float eyeOffset = 1.6f;
@@ -34,9 +35,24 @@ namespace Voxeload.Entities
 
         public virtual void Move(Vector3 a)
         {
-            Vector3 o = new(a);
+            Vector3 _a = new(a);
 
-            List<AABB> aabbs = level.GetAABBs(0, AABB.Expand(a));
+            InWater = false;
+            List<AABB> aabbs = level.GetAABBs(1, AABB.Expand(_a));
+            AABB swimAABB = new(new(AABB.A.X, AABB.A.Y + aabbHeight / 2, AABB.A.Z), new(AABB.B));
+            foreach (AABB aabb in aabbs)
+            {
+                if (AABB.Intersects(aabb))
+                {
+                    InWater = true;
+                    _a = new(_a.X * 0.5f, _a.Y * 0.5f, _a.Z * 0.5f);
+                    break;
+                }
+            }
+
+            Vector3 o = new(_a);
+
+            aabbs = level.GetAABBs(0, AABB.Expand(_a));
 
             aabbs.Add(new(new(0, 0, 0), new(0, Level.Y_LENGTH * Chunk.Y_LENGTH, Level.Z_LENGTH * Chunk.Z_LENGTH)));
             aabbs.Add(new(new(0, 0, 0), new(Level.X_LENGTH * Chunk.X_LENGTH, Level.Y_LENGTH * Chunk.Y_LENGTH, 0)));
@@ -47,25 +63,25 @@ namespace Voxeload.Entities
 
             foreach (AABB aabb in aabbs)
             {
-                a.Y = aabb.ClipYCollide(AABB, a.Y);
+                _a.Y = aabb.ClipYCollide(AABB, _a.Y);
             }
-            AABB.Move(new(0, a.Y, 0));
+            AABB.Move(new(0, _a.Y, 0));
             foreach (AABB aabb in aabbs)
             {
-                a.X = aabb.ClipXCollide(AABB, a.X);
+                _a.X = aabb.ClipXCollide(AABB, _a.X);
             }
-            AABB.Move(new(a.X, 0, 0));
+            AABB.Move(new(_a.X, 0, 0));
             foreach (AABB aabb in aabbs)
             {
-                a.Z = aabb.ClipZCollide(AABB, a.Z);
+                _a.Z = aabb.ClipZCollide(AABB, _a.Z);
             }
-            AABB.Move(new(0, 0, a.Z));
+            AABB.Move(new(0, 0, _a.Z));
 
-            OnGround = o.Y != a.Y && o.Y < 0;
+            OnGround = o.Y != _a.Y && o.Y < 0;
 
-            if (o.X != a.X) PosDelta.X = 0;
-            if (o.Y != a.Y) PosDelta.Y = 0;
-            if (o.Z != a.Z) PosDelta.Z = 0;
+            if (o.X != _a.X) PosDelta.X = 0;
+            if (o.Y != _a.Y) PosDelta.Y = 0;
+            if (o.Z != _a.Z) PosDelta.Z = 0;
 
             Pos.X = (AABB.A.X + AABB.B.X) / 2.0f;
             Pos.Y = AABB.A.Y + eyeOffset;
@@ -83,11 +99,6 @@ namespace Voxeload.Entities
 
             PosDelta.X += (dx *= dist) * cos - (dz *= dist) * sin;
             PosDelta.Z += dz * cos + dx * sin;
-        }
-
-        public virtual void Jump(float dy)
-        {
-            if (OnGround) PosDelta.Y = dy;
         }
 
         public virtual void SetPos(Vector3 pos)

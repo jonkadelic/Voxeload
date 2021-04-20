@@ -9,18 +9,18 @@ using Voxeload.World;
 
 namespace Voxeload.Render
 {
-    public class CubeTileModels : BaseTileModels
+    public class WaterTileModels : BaseTileModels
     {
         private static readonly Vector3[] allVertices =
         {
             new(0.0f, 0.0f, 0.0f),
             new(0.0f, 0.0f, 1.0f),
-            new(0.0f, 1.0f, 0.0f),
-            new(0.0f, 1.0f, 1.0f),
+            new(0.0f, 0.875f, 0.0f),
+            new(0.0f, 0.875f, 1.0f),
             new(1.0f, 0.0f, 0.0f),
             new(1.0f, 0.0f, 1.0f),
-            new(1.0f, 1.0f, 0.0f),
-            new(1.0f, 1.0f, 1.0f)
+            new(1.0f, 0.875f, 0.0f),
+            new(1.0f, 0.875f, 1.0f)
         };
         private static readonly byte[,] faceMaps = { { 0, 2, 4, 6 }, { 1, 3, 5, 7 }, { 0, 1, 4, 5 }, { 2, 3, 6, 7 }, { 0, 1, 2, 3 }, { 4, 5, 6, 7 } };
         private static readonly Vector2[,] allUVs =
@@ -84,7 +84,7 @@ namespace Voxeload.Render
             return models[sides];
         }
 
-        static CubeTileModels()
+        static WaterTileModels()
         {
             models = new TileModel[1 << 6];
 
@@ -127,6 +127,28 @@ namespace Voxeload.Render
                         for (int j = 0; j < 6; j++)
                         {
                             uvFaces.Add((byte)(1 << face));
+                        }
+
+                        if (face == 3)
+                        {
+                            vertices.Add(new(1.0f, 0.875f, 0.0f));
+                            vertices.Add(new(0.0f, 0.875f, 1.0f));
+                            vertices.Add(new(0.0f, 0.875f, 0.0f));
+                            vertices.Add(new(0.0f, 0.875f, 1.0f));
+                            vertices.Add(new(1.0f, 0.875f, 0.0f));
+                            vertices.Add(new(1.0f, 0.875f, 1.0f));
+
+                            uvs.Add(allUVs[2, 0]);
+                            uvs.Add(allUVs[2, 1]);
+                            uvs.Add(allUVs[2, 2]);
+                            uvs.Add(allUVs[2, 3]);
+                            uvs.Add(allUVs[2, 4]);
+                            uvs.Add(allUVs[2, 5]);
+
+                            for (int j = 0; j < 6; j++)
+                            {
+                                uvFaces.Add((byte)(1 << 2));
+                            }
                         }
                     }
                 }

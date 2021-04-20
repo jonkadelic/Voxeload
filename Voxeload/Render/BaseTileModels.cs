@@ -11,7 +11,5 @@ namespace Voxeload.Render
     public abstract class BaseTileModels
     {
         public abstract TileModel GetModel(byte sides);
-
-        public abstract byte[] GetColours(ITileAppearance appearance, byte sides);
     }
 }

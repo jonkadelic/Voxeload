@@ -12,6 +12,9 @@ namespace Voxeload
             gws.RenderFrequency = 60.0f;
             gws.UpdateFrequency = 60.0f;
 
+            NativeWindowSettings nws = NativeWindowSettings.Default;
+            nws.Flags |= OpenTK.Windowing.Common.ContextFlags.Debug;
+
             using Voxeload vox = new(gws, NativeWindowSettings.Default);
 
             vox.Run();

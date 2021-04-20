@@ -14,13 +14,19 @@ namespace Voxeload.World
         public const int Y_LENGTH = 4;
         public const int Z_LENGTH = 16;
 
+        private Voxeload voxeload;
         public readonly Chunk[,,] chunks = new Chunk[Z_LENGTH, Y_LENGTH, X_LENGTH];
         private ChunkGenExchangeQueue generator;
-        private Queue<(int x, int y, int z)> chunksToGenerate = new();
+        private List<(int x, int y, int z)> chunksToGenerate = new();
+        private List<(Vector3i pos, byte tile)> structureBuffer = new();
+        private GameTickQueueThread gameTickThread;
 
-        public Level(IChunkGenerator generator)
+        public Level(Voxeload voxeload, IChunkGenerator generator)
         {
-            this.generator = new(this, generator);
+            this.voxeload = voxeload;
+            this.generator = new(ref structureBuffer, this, generator);
+
+            gameTickThread = new(this);
         }
 
         public Chunk GetChunk(int x, int y, int z)
@@ -31,7 +37,7 @@ namespace Voxeload.World
 
             Chunk chunk = chunks[z, y, x];
 
-            if (chunk == null && chunksToGenerate.Contains((x, y, z)) == false) chunksToGenerate.Enqueue((x, y, z));
+            if (chunk == null && chunksToGenerate.Contains((x, y, z)) == false) chunksToGenerate.Add((x, y, z));
 
             return chunk;
         }
@@ -41,9 +47,13 @@ namespace Voxeload.World
             int counter = 0;
             while (chunksToGenerate.Count > 0 && counter < 1)
             {
-                (int x, int y, int z) = chunksToGenerate.Dequeue();
+                (int x, int y, int z) = chunksToGenerate.First();
 
-                generator.Request(new(x, y, z));
+                if (chunks[z, y, x] == null)
+                {
+                    generator.Request(new(x, y, z));
+                    chunksToGenerate.RemoveAt(0);
+                }
 
                 counter++;
             }
@@ -54,7 +64,35 @@ namespace Voxeload.World
             {
                 chunks[chunk.Z, chunk.Y, chunk.X] = chunk;
                 counter++;
+
+                for (int i = 0; i < structureBuffer.Count; i++)
+                {
+                    var item = structureBuffer[i];
+                    Vector3i chunkPos = new(item.pos.X / Chunk.X_LENGTH, item.pos.Y / Chunk.Y_LENGTH, item.pos.Z / Chunk.Z_LENGTH);
+
+                    if (chunkPos.X >= 0 && chunkPos.X < X_LENGTH && chunkPos.Y >= 0 && chunkPos.Y < Y_LENGTH && chunkPos.Z >= 0 && chunkPos.Z < Z_LENGTH)
+                    {
+                        Chunk structureChunk = chunks[chunkPos.Z, chunkPos.Y, chunkPos.X];
+                        if (structureChunk != null)
+                        {
+                            Vector3i tilePos = new(item.pos.X % Chunk.X_LENGTH, item.pos.Y % Chunk.Y_LENGTH, item.pos.Z % Chunk.Z_LENGTH);
+                            if (structureChunk.GetTileID(0, tilePos.X, tilePos.Y, tilePos.Z) == Tile.air.ID)
+                            {
+                                structureChunk.SetTileID(0, tilePos.X, tilePos.Y, tilePos.Z, item.tile);
+                            }
+                            structureBuffer.RemoveAt(i);
+                            i--;
+                        }
+                    }
+                    else
+                    {
+                        structureBuffer.RemoveAt(i);
+                        i--;
+                    }
+                }
             }
+
+
         }
 
         public byte GetTileID(int layer, int x, int y, int z)
@@ -96,8 +134,10 @@ namespace Voxeload.World
             Chunk chunk = chunks[chunkZ, chunkY, chunkX];
             if (chunk == null) return;
 
+            // Set block
             chunk.SetTileID(layer, tileX, tileY, tileZ, id);
 
+            // Dirty surrounding chunks
             if (tileX == 0 && chunkX > 0)
             {
                 Chunk otherChunk = chunks[chunkZ, chunkY, chunkX - 1];
@@ -130,8 +170,44 @@ namespace Voxeload.World
             }
         }
 
+        public void SetTileIDNotify(int layer, Vector3i pos, Vector3i source, byte id)
+        {
+            if (pos.X != -1 && pos.Y != -1 && pos.Z != -1)
+            {
+                SetTileID(layer, pos.X, pos.Y, pos.Z, id);
+
+                //Tile.tiles[id].OnUpdate(this, pos.X, pos.Y, pos.Z);
+                QueueTick(new(pos.X, pos.Y, pos.Z), Tile.tiles[id]);
+                for (int i = 0; i < Chunk.LAYER_COUNT; i++)
+                {
+                    if (source.X != pos.X - 1) QueueTick(new(pos.X - 1, pos.Y, pos.Z), Tile.tiles[GetTileID(i, pos.X - 1, pos.Y, pos.Z)]);
+                    if (source.X != pos.X + 1) QueueTick(new(pos.X + 1, pos.Y, pos.Z), Tile.tiles[GetTileID(i, pos.X + 1, pos.Y, pos.Z)]);
+                    if (source.Y != pos.Y - 1) QueueTick(new(pos.X, pos.Y - 1, pos.Z), Tile.tiles[GetTileID(i, pos.X, pos.Y - 1, pos.Z)]);
+                    if (source.Y != pos.Y + 1) QueueTick(new(pos.X, pos.Y + 1, pos.Z), Tile.tiles[GetTileID(i, pos.X, pos.Y + 1, pos.Z)]);
+                    if (source.Z != pos.Z - 1) QueueTick(new(pos.X, pos.Y, pos.Z - 1), Tile.tiles[GetTileID(i, pos.X, pos.Y, pos.Z - 1)]);
+                    if (source.Z != pos.Z + 1) QueueTick(new(pos.X, pos.Y, pos.Z + 1), Tile.tiles[GetTileID(i, pos.X, pos.Y, pos.Z + 1)]);
+
+                    //if (source.X != pos.X - 1) Tile.tiles[GetTileID(i, pos.X - 1, pos.Y, pos.Z)].OnUpdate(this, pos.X - 1, pos.Y, pos.Z);
+                    //if (source.X != pos.X + 1) Tile.tiles[GetTileID(i, pos.X + 1, pos.Y, pos.Z)].OnUpdate(this, pos.X + 1, pos.Y, pos.Z);
+                    //if (source.Y != pos.Y - 1) Tile.tiles[GetTileID(i, pos.X, pos.Y - 1, pos.Z)].OnUpdate(this, pos.X, pos.Y - 1, pos.Z);
+                    //if (source.Y != pos.Y + 1) Tile.tiles[GetTileID(i, pos.X, pos.Y + 1, pos.Z)].OnUpdate(this, pos.X, pos.Y + 1, pos.Z);
+                    //if (source.Z != pos.Z - 1) Tile.tiles[GetTileID(i, pos.X, pos.Y, pos.Z - 1)].OnUpdate(this, pos.X, pos.Y, pos.Z - 1);
+                    //if (source.Z != pos.Z + 1) Tile.tiles[GetTileID(i, pos.X, pos.Y, pos.Z + 1)].OnUpdate(this, pos.X, pos.Y, pos.Z + 1);
+                }
+
+                Console.WriteLine($"Notifying block update at {pos} from {source}.");
+            }
+        }
+
+        public void QueueTick(Vector3i pos, Tile tile)
+        {
+            gameTickThread.QueueTick(pos, tile);
+        }
+
         public byte GetVisibleSides(int layer, int x, int y, int z)
         {
+            if (Tile.tiles[GetTileID(layer, x, y, z)] is TileTransparent) return 0b00111111;
+
             byte minusZ = GetTileID(layer, x, y, z - 1);
             byte plusZ = GetTileID(layer, x, y, z + 1);
             byte minusY = GetTileID(layer, x, y - 1, z);
@@ -141,12 +217,12 @@ namespace Voxeload.World
 
             byte sides = 0;
 
-            if (minusZ == 0) sides |= 1 << 0;
-            if (plusZ == 0) sides |= 1 << 1;
-            if (minusY == 0) sides |= 1 << 2;
-            if (plusY == 0) sides |= 1 << 3;
-            if (minusX == 0) sides |= 1 << 4;
-            if (plusX == 0) sides |= 1 << 5;
+            if (minusZ == 0 || Tile.tiles[minusZ] is TileTransparent) sides |= 1 << 0;
+            if (plusZ == 0 || Tile.tiles[plusZ] is TileTransparent) sides |= 1 << 1;
+            if (minusY == 0 || Tile.tiles[minusY] is TileTransparent) sides |= 1 << 2;
+            if (plusY == 0 || Tile.tiles[plusY] is TileTransparent) sides |= 1 << 3;
+            if (minusX == 0 || Tile.tiles[minusX] is TileTransparent) sides |= 1 << 4;
+            if (plusX == 0 || Tile.tiles[plusX] is TileTransparent) sides |= 1 << 5;
 
             return sides;
         }
@@ -172,7 +248,7 @@ namespace Voxeload.World
                     for (int x = a.X; x < b.X; x++)
                     {
                         byte tile = GetTileID(layer, x, y, z);
-                        if (tile == 0) continue;
+                        if (tile == 0 || Tile.tiles[tile].Collides == false) continue;
 
                         AABB c = new(new(x, y, z), new(x + 1, y + 1, z + 1));
 
@@ -182,6 +258,25 @@ namespace Voxeload.World
             }
 
             return aabbs;
+        }
+
+        public void TickChunks(int counter)
+        {
+            if (voxeload.player == null) return;
+            for (int z = 0; z < Z_LENGTH; z++)
+            {
+                for (int y = 0; y < Y_LENGTH; y++)
+                {
+                    for (int x = 0; x < X_LENGTH; x++)
+                    {
+                        if (z == (int)(voxeload.player.Pos.Z / Chunk.Z_LENGTH) && y == (int)(voxeload.player.Pos.Y / Chunk.Y_LENGTH) && x == (int)(voxeload.player.Pos.X / Chunk.X_LENGTH))
+                        {
+                            Console.WriteLine("Ticked player chunk!");
+                        }
+                        if (Vector3.DistanceSquared(voxeload.player.Pos, new(x * Chunk.X_LENGTH, y * Chunk.Y_LENGTH, z * Chunk.Z_LENGTH)) < 16384) chunks[z, y, x]?.TickTiles(counter);
+                    }
+                }
+            }
         }
     }
 }

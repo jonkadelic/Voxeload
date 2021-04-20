@@ -5,6 +5,8 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
+using OpenTK.Mathematics;
+
 namespace Voxeload
 {
     public abstract class ExchangeQueue<incoming, outgoing>

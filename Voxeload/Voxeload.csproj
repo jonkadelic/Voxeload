@@ -17,6 +17,7 @@
     <None Remove="Entities\EntityPlayer.cs~RF20e56d7f.TMP" />
     <None Remove="Render\BaseModel.cs~RF1e7aa115.TMP" />
     <None Remove="Shaders\shader.vert~RF1bef2711.TMP" />
+    <None Remove="Shaders\water_tile.frag~RF39031cc1.TMP" />
   </ItemGroup>
 
   <ItemGroup>
@@ -38,10 +39,22 @@
     <None Update="Shaders\selection.vert">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+    <None Update="Shaders\water_tile.vert">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Shaders\water_tile.frag">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Update="Shaders\tile.frag">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <None Update="Shaders\tile.vert">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Shaders\water_frame.frag">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Shaders\water_frame.vert">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <None Update="Textures\terrain.png">

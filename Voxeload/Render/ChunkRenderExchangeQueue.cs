@@ -21,6 +21,7 @@ namespace Voxeload.Render
         protected override ChunkModel[] Process(Chunk chunk)
         {
 
+            Console.WriteLine($"Regenerating chunk model at {chunk.X}, {chunk.Y}, {chunk.Z}");
 
             List<ChunkModel> models = new();
 
