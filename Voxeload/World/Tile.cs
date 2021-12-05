@@ -31,6 +31,8 @@ namespace Voxeload.World
 
         public virtual int TickInterval { get; } = -1;
 
+        public virtual bool IsTransparent { get; init; } = false;
+
         public Tile(byte id, ITileAppearance appearance)
         {
             ID = id;
@@ -57,17 +59,17 @@ namespace Voxeload.World
         }
 
         public static readonly Tile[] tiles = new Tile[256];
-        public static readonly TileTransparent air = new(0, null);
+        public static readonly TileTransparent air = new(0, null) { IsTransparent = true };
         public static readonly Tile grass = new(1, new TextureTileAppearance(0, 2, 3));
         public static readonly Tile stone = new(2, 1);
         public static readonly Tile dirt = new(3, 2);
         public static readonly Tile planks = new(4, 4);
         public static readonly TileFalling sand = new(5, 18);
         public static readonly TileFalling gravel = new(6, 19);
-        public static readonly TileWater water = new(7, new TextureTileAppearance(205));
-        public static readonly TileTransparent glass = new(8, new TextureTileAppearance(49));
+        public static readonly TileWater water = new(7, new TextureTileAppearance(205)) { IsTransparent = true };
+        public static readonly TileTransparent glass = new(8, new TextureTileAppearance(49)) { IsTransparent = true };
         public static readonly Tile log = new(9, new TextureTileAppearance(21, 20));
-        public static readonly TileTransparent leaves = new(10, new TextureTileAppearance(52));
-        public static readonly TileFlower roseFlower = new(11, new TextureTileAppearance(12));
+        public static readonly TileTransparent leaves = new(10, new TextureTileAppearance(52)) { IsTransparent = true };
+        public static readonly TileFlower roseFlower = new(11, new TextureTileAppearance(12)) { IsTransparent = true };
     }
 }

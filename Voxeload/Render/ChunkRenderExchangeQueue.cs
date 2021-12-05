@@ -9,16 +9,16 @@ using Voxeload.World;
 
 namespace Voxeload.Render
 {
-    public class ChunkRenderExchangeQueue : ExchangeQueue<Chunk, ChunkModel[]>
+    public class ChunkRenderExchangeQueue : ExchangeQueue<Chunk, (Chunk, ChunkModel[])>
     {
         protected Level level;
 
-        public ChunkRenderExchangeQueue(Level level) : base(ThreadPriority.AboveNormal)
+        public ChunkRenderExchangeQueue(Level level) : base("ChunkRenderExchangeQueue", ThreadPriority.AboveNormal)
         {
             this.level = level;
         }
 
-        protected override ChunkModel[] Process(Chunk chunk)
+        protected override (Chunk, ChunkModel[]) Process(Chunk chunk)
         {
 
             Console.WriteLine($"Regenerating chunk model at {chunk.X}, {chunk.Y}, {chunk.Z}");
@@ -32,6 +32,7 @@ namespace Voxeload.Render
                     List<Vector3> vertices = new();
                     List<Vector2> uvs = new();
                     List<byte> faces = new();
+                    List<float> brightnesses = new();
                     for (int z = 0; z < Chunk.Z_LENGTH; z++)
                     {
                         for (int y = 0; y < Chunk.Y_LENGTH; y++)
@@ -66,15 +67,48 @@ namespace Voxeload.Render
                                 }
 
                                 faces.AddRange(model.UVFaces);
+
+                                foreach (byte face in model.UVFaces)
+                                {
+                                    float brightness = 1.0f;
+
+                                    if (face == (byte)Tile.Face.North)
+                                    {
+                                        brightness = level.GetBrightness((chunk.X * Chunk.X_LENGTH + x), chunk.Y * Chunk.Y_LENGTH + y, chunk.Z * Chunk.Z_LENGTH + z - 1);
+                                    }
+                                    else if (face == (byte)Tile.Face.South)
+                                    {
+                                        brightness = level.GetBrightness((chunk.X * Chunk.X_LENGTH + x), chunk.Y * Chunk.Y_LENGTH + y, chunk.Z * Chunk.Z_LENGTH + z + 1);
+                                    }
+                                    else if (face == (byte)Tile.Face.Bottom)
+                                    {
+                                        brightness = level.GetBrightness(chunk.X * Chunk.X_LENGTH + x, (chunk.Y * Chunk.Y_LENGTH + y) - 1, chunk.Z * Chunk.Z_LENGTH + z);
+                                    }
+                                    else if (face == (byte)Tile.Face.Top)
+                                    {
+                                        brightness = level.GetBrightness(chunk.X * Chunk.X_LENGTH + x, (chunk.Y * Chunk.Y_LENGTH + y) + 1, chunk.Z * Chunk.Z_LENGTH + z);
+                                    }
+                                    else if (face == (byte)Tile.Face.West)
+                                    {
+                                        brightness = level.GetBrightness(chunk.X * Chunk.X_LENGTH + x - 1, chunk.Y * Chunk.Y_LENGTH + y, (chunk.Z * Chunk.Z_LENGTH + z));
+                                    }
+                                    else if (face == (byte)Tile.Face.East)
+                                    {
+                                        brightness = level.GetBrightness(chunk.X * Chunk.X_LENGTH + x + 1, chunk.Y * Chunk.Y_LENGTH + y, (chunk.Z * Chunk.Z_LENGTH + z));
+                                    }
+
+                                    brightnesses.Add(brightness);
+                                }
                             }
                         }
                     }
 
-                    models.Add(new(chunk, vertices.ToArray(), uvs.ToArray(), faces.ToArray()));
+                    models.Add(new(chunk, vertices.ToArray(), uvs.ToArray(), faces.ToArray(), brightnesses.ToArray()));
+                    chunk.IsDirty[layer] = false;
                 }
             }
 
-            return models.ToArray();
+            return (chunk, models.ToArray());
         }
     }
 }

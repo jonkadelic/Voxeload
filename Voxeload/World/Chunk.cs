@@ -9,9 +9,9 @@ namespace Voxeload.World
 {
     public class Chunk : ITileAccess
     {
-        public const int X_LENGTH = 32;
-        public const int Y_LENGTH = 32;
-        public const int Z_LENGTH = 32;
+        public const int X_LENGTH = 16;
+        public const int Y_LENGTH = 16;
+        public const int Z_LENGTH = 16;
         public const int LAYER_COUNT = 2;
 
         private readonly byte[,,,] tiles;
@@ -33,6 +33,11 @@ namespace Voxeload.World
             X = x;
             Y = y;
             Z = z;
+
+            for (int i = 0; i < LAYER_COUNT; i++)
+            {
+                IsDirty[i] = true;
+            }
         }
 
         public byte GetTileID(int layer, int x, int y, int z)
@@ -55,12 +60,23 @@ namespace Voxeload.World
 
             lock (chunkDataLock)
             {
-                //Console.WriteLine($"Set tile at {x}, {y}, {z} in chunk {X}, {Y}, {Z} from {tiles[layer, z, y, x]} to {id}.");
                 tiles[layer, z, y, x] = id;
             }
 
-
+            Console.WriteLine("Dirty due to tile change");
             IsDirty[layer] = true;
+        }
+
+        public void SetTileIDNoDirty(int layer, int x, int y, int z, byte id)
+        {
+            if (x < 0 || x >= X_LENGTH) return;
+            if (y < 0 || y >= Y_LENGTH) return;
+            if (z < 0 || z >= Z_LENGTH) return;
+
+            lock (chunkDataLock)
+            {
+                tiles[layer, z, y, x] = id;
+            }
         }
 
         public byte GetVisibleSides(int layer, int x, int y, int z)

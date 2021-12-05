@@ -46,12 +46,15 @@ namespace Voxeload
         protected double frameAvg = 0;
         protected double frameAvgCount = 0;
 
+        public Frustum frustum;
+
         public Voxeload(GameWindowSettings gws, NativeWindowSettings nws) : base(gws, nws)
         {
             ClientRectangle = new(256, 256, 1920 + 256, 1080 + 256);
             level = new(this, new DefaultChunkGenerator());
             levelRenderer = new(this, level);
             player = new(this, level);
+            frustum = new Frustum();
         }
 
         protected override void OnLoad()
@@ -188,13 +191,19 @@ namespace Voxeload
 
             if (renderCounter < 0)
             {
-                renderCounter = UpdateFrequency;
+                renderCounter = RenderFrequency;
                 frameAvg = 0;
                 frameAvgCount = 0;
             }
             renderCounter--;
             frameAvg += (1 / args.Time);
             frameAvgCount++;
+
+
+            if (renderCounter < 0)
+            {
+                Console.WriteLine($"{frameAvg / frameAvgCount:F4} FPS, {player.Pos}");
+            }
         }
 
         double renderCounter;
@@ -224,6 +233,8 @@ namespace Voxeload
             view = Matrix4.CreateTranslation(-player.Pos) * Matrix4.CreateRotationY(MathHelper.DegreesToRadians(player.YRotation)) * Matrix4.CreateRotationX(MathHelper.DegreesToRadians(player.XRotation));
             projection = Matrix4.CreatePerspectiveFieldOfView(MathHelper.DegreesToRadians(90), (float)ClientSize.X / ClientSize.Y, 0.1f, 256.0f);
 
+            frustum.CalculateFrustum(projection, model * view);
+
             ShaderProgram waterTile = ShaderProgramManager.GetProgram("water_tile");
             waterTile.Use();
             waterTile.SetInt("texture0", 0);
@@ -242,7 +253,7 @@ namespace Voxeload
 
             levelRenderer.Render();
 
-            if (lookPos != null)
+            if (lookPos != null && lookPos.HasValue)
             {
                 FramebufferManager.GetFramebuffer("tiles").Use();
                 ShaderProgram selection = ShaderProgramManager.GetProgram("selection");
@@ -281,11 +292,6 @@ namespace Voxeload
             Context.SwapBuffers();
 
             base.OnRenderFrame(args);
-
-            if (renderCounter < 0)
-            {
-                Console.WriteLine($"{frameAvg / frameAvgCount:F4} FPS, {player.Pos}");
-            }
         }
     }
 }

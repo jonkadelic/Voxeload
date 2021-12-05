@@ -14,10 +14,18 @@ namespace Voxeload.Render
 
         public byte[] Faces { get; }
 
-        public ChunkModel(Chunk chunk, Vector3[] vertices, Vector2[] uvs, byte[] faces) : base(vertices, uvs)
+        public float[] Brightnesses { get; }
+
+        public ChunkModel(Chunk chunk, Vector3[] vertices, Vector2[] uvs, byte[] faces, float[] brightnesses) : base(vertices, uvs)
         {
             Chunk = chunk;
             Faces = faces;
+            Brightnesses = brightnesses;
+        }
+
+        public override string ToString()
+        {
+            return $"Chunk: {Chunk.X} {Chunk.Y} {Chunk.Z}";
         }
     }
 }

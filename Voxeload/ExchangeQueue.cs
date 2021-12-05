@@ -16,9 +16,17 @@ namespace Voxeload
         protected bool stopping = false;
         protected object inQueueLock = new();
         protected object outQueueLock = new();
+        protected string queueName;
+        protected bool hasQueueItems = false;
 
-        public ExchangeQueue(ThreadPriority priority)
+        public override string ToString()
         {
+            return queueName;
+        }
+
+        public ExchangeQueue(string queueName, ThreadPriority priority)
+        {
+            this.queueName = queueName;
             Thread t = new(() => Run());
             t.IsBackground = true;
             t.Priority = priority;
@@ -29,16 +37,21 @@ namespace Voxeload
         {
             while (!stopping)
             {
-                if (inQueue.Count > 0)
+                if (hasQueueItems)
                 {
                     incoming incoming;
                     lock (inQueueLock)
                     {
                         incoming = inQueue.Dequeue();
+                        if (inQueue.Count == 0)
+                        {
+                            hasQueueItems = false;
+                        }
                     }
                     lock (outQueueLock)
                     {
                         outQueue.Enqueue(Process(incoming));
+                        //Console.WriteLine("Processing in " + queueName);
                     }
                 }
             }
@@ -51,6 +64,7 @@ namespace Voxeload
                 lock (inQueueLock)
                 {
                     inQueue.Enqueue(incoming);
+                    hasQueueItems = true;
                 }
                 return true;
             }

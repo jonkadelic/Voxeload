@@ -2,9 +2,11 @@
 layout (location = 0) in vec3 aPosition;
 layout (location = 1) in vec2 aTexCoord;
 layout (location = 2) in int aTexFace;
+layout (location = 3) in float aBrightness;
 
 out vec2 texCoord;
 flat out int texFace;
+out float brightness;
 
 uniform mat4 model;
 uniform mat4 view;
@@ -17,4 +19,5 @@ void main()
 
 	texCoord = aTexCoord;
 	texFace = aTexFace;
+	brightness = aBrightness;
 }

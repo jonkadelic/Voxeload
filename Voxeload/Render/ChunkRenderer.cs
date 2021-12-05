@@ -16,10 +16,13 @@ namespace Voxeload.Render
         private int[] vaos = new int[Chunk.LAYER_COUNT];
         private int[] uvbos = new int[Chunk.LAYER_COUNT];
         private int[] facebos = new int[Chunk.LAYER_COUNT];
+        private int[] bribos = new int[Chunk.LAYER_COUNT];
 
         private Voxeload voxeload;
 
         public bool IsChunkLoaded { get; protected set; }
+
+        public ChunkCoord ChunkCoords { get; protected set; } = null;
 
         private int[] vertexLengths = new int[Chunk.LAYER_COUNT];
 
@@ -31,6 +34,7 @@ namespace Voxeload.Render
                 vaos[i] = GL.GenVertexArray();
                 uvbos[i] = GL.GenBuffer();
                 facebos[i] = GL.GenBuffer();
+                bribos[i] = GL.GenBuffer();
             }
 
             this.voxeload = voxeload;
@@ -42,10 +46,13 @@ namespace Voxeload.Render
             GL.DeleteVertexArrays(Chunk.LAYER_COUNT, vaos);
             GL.DeleteBuffers(Chunk.LAYER_COUNT, uvbos);
             GL.DeleteBuffers(Chunk.LAYER_COUNT, facebos);
+            GL.DeleteBuffers(Chunk.LAYER_COUNT, bribos);
         }
 
-        public void LoadChunkModel(ChunkModel[] models)
+        public void LoadChunkModel(ChunkCoord coord, ChunkModel[] models)
         {
+            ChunkCoords = coord;
+
             for (int i = 0; i < Chunk.LAYER_COUNT; i++)
             {
                 // Bind VAO
@@ -68,6 +75,12 @@ namespace Voxeload.Render
                 GL.BufferData(BufferTarget.ArrayBuffer, sizeof(byte) * models[i].Faces.Length, models[i].Faces, BufferUsageHint.DynamicDraw);
                 GL.VertexAttribIPointer(2, 1, VertexAttribIntegerType.UnsignedByte, sizeof(byte), IntPtr.Zero);
                 GL.EnableVertexAttribArray(2);
+
+                // Load brightnesses
+                GL.BindBuffer(BufferTarget.ArrayBuffer, bribos[i]);
+                GL.BufferData(BufferTarget.ArrayBuffer, sizeof(float) * models[i].Brightnesses.Length, models[i].Brightnesses, BufferUsageHint.DynamicDraw);
+                GL.VertexAttribPointer(3, 1, VertexAttribPointerType.Float, false, sizeof(float), 0);
+                GL.EnableVertexAttribArray(3);
 
                 // Unbind VAO
                 GL.BindVertexArray(0);

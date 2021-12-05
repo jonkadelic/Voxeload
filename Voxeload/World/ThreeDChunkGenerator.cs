@@ -18,28 +18,27 @@ namespace Voxeload.World
         public byte[,,,] GenerateChunk(ref List<(Vector3i pos, byte tile)> structureBuffer, int chunkX, int chunkY, int chunkZ)
         {
             byte[,,,] tiles = new byte[Chunk.LAYER_COUNT, Chunk.X_LENGTH, Chunk.Y_LENGTH, Chunk.Z_LENGTH];
-            Noise.Seed = baseSeed;
+
+            int xScale = 4;
+            int yScale = 8;
+            int zScale = 4;
+            
+            float[,,] noise = PerlinGenerator.GetNoise(baseSeed, (chunkX * Chunk.X_LENGTH) / xScale, (chunkY * Chunk.Y_LENGTH) / yScale, (chunkZ * Chunk.Z_LENGTH) / zScale, 
+                ((chunkX + 1) * Chunk.X_LENGTH) / xScale, ((chunkY + 1) * Chunk.Y_LENGTH) / yScale, ((chunkZ + 1) * Chunk.Z_LENGTH) / zScale, 0.009f);
+
+            float currentXDensity = 0;
+            float currentYDensity = 0;
+            float currentZDensity = 0;
 
             for (int tileZ = 0; tileZ < Chunk.Z_LENGTH; tileZ++)
             {
                 int worldZ = chunkZ * Chunk.Z_LENGTH + tileZ;
+
                 for (int tileX = 0; tileX < Chunk.X_LENGTH; tileX++)
                 {
                     int worldX = chunkX * Chunk.X_LENGTH + tileX;
 
-                    // Generate base values
-                    Noise.Seed = (int)(baseSeed ^ 0x1fc65241);
-                    float elevation = Noise.CalcPixel2D(worldX, worldZ, 0.001f) / 512.0f - 0.25f;
-
-                    Noise.Seed = (int)(baseSeed ^ 0x94ae628d);
-                    float roughness = Noise.CalcPixel2D(worldX, worldZ, 0.005f) / 256.0f - 0.5f;
-
-                    Noise.Seed = (int)(baseSeed ^ 0xfc6d5abb);
-                    float detail = Noise.CalcPixel2D(worldX, worldZ, 0.05f) / 1024.0f - 0.125f;
-
-                    Noise.Seed = baseSeed;
-
-                    int baseY = (int)((elevation + (roughness * detail)) * 64 + 64);
+                    int baseY = 0;
 
                     for (int tileY = 0; tileY < Chunk.Y_LENGTH; tileY++)
                     {

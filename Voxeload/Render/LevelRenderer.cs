@@ -7,6 +7,8 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
+
+using Voxeload.Entities;
 using Voxeload.World;
 
 namespace Voxeload.Render
@@ -16,10 +18,9 @@ namespace Voxeload.Render
         protected Voxeload voxeload;
 
         Level level;
-        ChunkRenderer[,,] renderers;
+        List<ChunkRenderer> renderers;
 
-        List<(int x, int y, int z)> chunksToReload = new();
-        List<(int x, int y, int z)> chunksToDraw = new();
+        HashSet<ChunkCoord> chunksToReload = new();
 
         ChunkRenderExchangeQueue modeller;
 
@@ -27,17 +28,16 @@ namespace Voxeload.Render
         {
             this.voxeload = voxeload;
 
-            renderers = new ChunkRenderer[Level.Z_LENGTH, Level.Y_LENGTH, Level.X_LENGTH];
+            renderers = new();
 
-            for (int z = 0; z < Level.Z_LENGTH; z++)
+            for (int z = 0; z < EntityPlayer.viewRadius * 2 + 1; z++)
             {
-                for (int y = 0; y < Level.Y_LENGTH; y++)
+                for (int y = 0; y < EntityPlayer.viewRadius * 2 + 1; y++)
                 {
-                    for (int x = 0; x < Level.X_LENGTH; x++)
+                    for (int x = 0; x < EntityPlayer.viewRadius * 2 + 1; x++)
                     {
-                        renderers[z, y, x] = new ChunkRenderer(voxeload);
-                        chunksToReload.Add((x, y, z));
-                        chunksToDraw.Add((x, y, z));
+                        renderers.Add(new ChunkRenderer(voxeload));
+                        chunksToReload.Add(new(x, y, z));
                     }
                 }
             }
@@ -51,46 +51,83 @@ namespace Voxeload.Render
         {
             //chunksToDraw.Sort(new ChunkToRenderComparator(voxeload.player.Pos));
 
-            int counter = 0;
-            while (chunksToReload.Count > 0 && counter < 16) 
+            HashSet<ChunkCoord> visibleSet = voxeload.player.GetVisibleChunkSet();
+
+            foreach (ChunkCoord chunkCoord in chunksToReload)
             {
-                (int x, int y, int z) = chunksToReload[0];
-                Chunk chunk = level.GetChunk(x, y, z);
+                Chunk chunk = level.GetChunk(chunkCoord.X, chunkCoord.Y, chunkCoord.Z);
                 if (chunk != null)
                 {
+                    chunk.IsDirty[0] = false;
+                    chunk.IsDirty[1] = false;
                     modeller.Request(chunk);
-                    chunksToReload.RemoveAt(0);
+                    chunksToReload.Remove(chunkCoord);
                 }
-                counter++;
             }
 
-            ChunkModel[] models;
-            counter = 0;
-            while (counter < 16 && (models = modeller.Receive()) != null)
+            (Chunk, ChunkModel[]) models;
+            int counter = 0;
+            while (counter < 24 && (models = modeller.Receive()).Item2 != null)
             {
-                renderers[models[0].Chunk.Z, models[0].Chunk.Y, models[0].Chunk.X].LoadChunkModel(models);
-                counter++;
+                ChunkCoord coord = new(models.Item1.X, models.Item1.Y, models.Item1.Z);
+                bool foundRenderer = false;
+                // Find renderer to update
+                foreach (ChunkRenderer renderer in renderers)
+                {
+                    if (renderer.ChunkCoords != null && renderer.ChunkCoords.Equals(coord))
+                    {
+                        renderer.LoadChunkModel(coord, models.Item2);
+                        foundRenderer = true;
+                        break;
+                    }
+                }
+
+                if (!foundRenderer)
+                {
+                    // Find free renderer
+                    foreach (ChunkRenderer renderer in renderers)
+                    {
+                        if (renderer.ChunkCoords == null || !visibleSet.Contains(renderer.ChunkCoords))
+                        {
+                            renderer.LoadChunkModel(coord, models.Item2);
+                            foundRenderer = true;
+                            break;
+                        }
+                    }
+                }
+
+                if (foundRenderer) counter++;
             }
 
             voxeload.FramebufferManager.GetFramebuffer("tiles").Use();
 
-            foreach ((int x, int y, int z) in chunksToDraw)
+            foreach (ChunkCoord coord in visibleSet)
             {
-                ChunkRenderer renderer = renderers[z, y, x];
-                Chunk chunk = level.GetChunk(x, y, z);
+                if (coord.X < 0 || coord.X >= Level.X_LENGTH) continue;
+                if (coord.Y < 0 || coord.Y >= Level.Y_LENGTH) continue;
+                if (coord.Z < 0 || coord.Z >= Level.Z_LENGTH) continue;
 
+                Chunk chunk = level.GetChunk(coord.X, coord.Y, coord.Z);
                 if (chunk == null) continue;
+
+                ChunkRenderer renderer = renderers.FirstOrDefault(r => r.ChunkCoords != null && r.ChunkCoords.Equals(coord));
+                if (renderer == null)
+                {
+                    chunksToReload.Add(coord);
+                    continue;
+                }
+
+                if (!voxeload.frustum.VolumeVsFrustum(new(chunk.X * Chunk.X_LENGTH, chunk.Y * Chunk.Y_LENGTH, chunk.Z * Chunk.Z_LENGTH), Chunk.X_LENGTH, Chunk.Y_LENGTH, Chunk.Z_LENGTH)) continue;
 
                 for (int l = 0; l < Chunk.LAYER_COUNT; l++)
                 {
                     if (chunk.IsDirty[l])
                     {
-                        chunksToReload.Insert(0, (x, y, z));
-                        chunk.IsDirty[l] = false;
+                        chunksToReload.Add(coord);
                     }
                 }
 
-                renderer.Render(x, y, z);
+                renderer.Render(coord.X, coord.Y, coord.Z);
             }
 
             Framebuffer.Disuse();

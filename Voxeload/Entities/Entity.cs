@@ -58,7 +58,7 @@ namespace Voxeload.Entities
             aabbs.Add(new(new(0, 0, 0), new(Level.X_LENGTH * Chunk.X_LENGTH, Level.Y_LENGTH * Chunk.Y_LENGTH, 0)));
             aabbs.Add(new(new(Level.X_LENGTH * Chunk.X_LENGTH, 0, 0), new(Level.X_LENGTH * Chunk.X_LENGTH, Level.Y_LENGTH * Chunk.Y_LENGTH, Level.Z_LENGTH * Chunk.Z_LENGTH)));
             aabbs.Add(new(new(0, 0, Level.Z_LENGTH * Chunk.Z_LENGTH), new(Level.X_LENGTH * Chunk.X_LENGTH, Level.Y_LENGTH * Chunk.Y_LENGTH, Level.Z_LENGTH * Chunk.Z_LENGTH)));
-            aabbs.Add(new(new(0, Level.Y_LENGTH * Chunk.Y_LENGTH, 0), new(Level.X_LENGTH * Chunk.X_LENGTH, Level.Y_LENGTH * Chunk.Y_LENGTH, Level.Z_LENGTH * Chunk.Z_LENGTH)));
+            //aabbs.Add(new(new(0, Level.Y_LENGTH * Chunk.Y_LENGTH, 0), new(Level.X_LENGTH * Chunk.X_LENGTH, Level.Y_LENGTH * Chunk.Y_LENGTH, Level.Z_LENGTH * Chunk.Z_LENGTH)));
             aabbs.Add(new(new(0, 0, 0), new(Level.X_LENGTH * Chunk.X_LENGTH, 0, Level.Z_LENGTH * Chunk.Z_LENGTH)));
 
             foreach (AABB aabb in aabbs)
